@@ -10,7 +10,7 @@ import {
     Alert,
     MenuItem,
 } from '@mui/material';
-import type { Player, PlayerPosition, Team } from '../../../types';
+import type { CreatePlayerDto, Player, PlayerPosition, Team } from '../../../types';
 import { updatePlayer } from '../services/players.service';
 
 interface EditPlayerDialogProps {
@@ -78,15 +78,16 @@ export const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
             setLoading(true);
             setError(null);
 
-            await updatePlayer(player.id, {
+            const payload: Partial<CreatePlayerDto> = {
                 teamId: Number(formData.teamId),
                 firstName: formData.firstName,
                 lastName: formData.lastName,
-                documentId: formData.documentId || null,
-                defaultDorsal: formData.defaultDorsal ? Number(formData.defaultDorsal) : null,
+                documentId: formData.documentId ? formData.documentId : null,
+                defaultDorsal: formData.defaultDorsal !== '' ? Number(formData.defaultDorsal) : null,
                 position: formData.position ? (formData.position as PlayerPosition) : null,
-            });
+            };
 
+            await updatePlayer(player.id, payload);
             onSuccess();
             onClose();
         } catch (err: any) {

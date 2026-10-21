@@ -80,13 +80,27 @@ export const TeamsPage: React.FC = () => {
         if (!selectedTeam) return;
         try {
             setDeleting(true);
+            setErrorMessage(null);
             await deleteTeam(selectedTeam.id);
             setOpenDeleteDialog(false);
             setSelectedTeam(null);
             fetchData();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error al eliminar equipo:', error);
-            setErrorMessage('No se pudo eliminar el equipo seleccionado.');
+
+            // Extraemos el mensaje personalizado que envía NestJS desde el backend
+            const backendMessage = error.response?.data?.message;
+
+            if (Array.isArray(backendMessage)) {
+                setErrorMessage(backendMessage.join(', '));
+            } else if (typeof backendMessage === 'string') {
+                setErrorMessage(backendMessage);
+            } else {
+                setErrorMessage('No se pudo eliminar el equipo seleccionado.');
+            }
+
+            setOpenDeleteDialog(false);
+            setSelectedTeam(null);
         } finally {
             setDeleting(false);
         }
@@ -109,7 +123,7 @@ export const TeamsPage: React.FC = () => {
             </Box>
 
             {errorMessage && (
-                <Alert severity="error" sx={{ mb: 3 }}>
+                <Alert severity="error" sx={{ mb: 3 }} onClose={() => setErrorMessage(null)}>
                     {errorMessage}
                 </Alert>
             )}

@@ -120,3 +120,8 @@ export type UpdateMatchDto = Partial<CreateMatchDto> & {
     awayScore?: number | null;
     status?: MatchStatus;
 };
+
+/**
+ * DTO para la actualización de datos de un jugador.
+ */
+export type UpdatePlayerDto = Partial<CreatePlayerDto>;

@@ -31,6 +31,13 @@ enum EventType {
   ASSIST
 }
 
+enum PlayerPosition {
+  GOALKEEPER
+  DEFENDER
+  MIDFIELDER
+  FORWARD
+}
+
 model Tournament {
   id          Int              @id @default(autoincrement())
   name        String
@@ -64,20 +71,21 @@ model Team {
 }
 
 model Player {
-  id            Int      @id @default(autoincrement())
+  id            Int             @id @default(autoincrement())
   teamId        Int
   firstName     String
   lastName      String
-  documentId    String   @unique
+  documentId    String          @unique
   defaultDorsal Int?
-  createdAt     DateTime @default(now())
+  position      PlayerPosition?
+  createdAt     DateTime        @default(now())
 
-  team        Team                @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  rosters     MatchRoster[]
-  subsOut     MatchSubstitution[] @relation("PlayerOut")
-  subsIn      MatchSubstitution[] @relation("PlayerIn")
-  events      MatchEvent[]
-  sanctions   Sanction[]
+  team      Team                @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  rosters   MatchRoster[]
+  subsOut   MatchSubstitution[] @relation("PlayerOut")
+  subsIn    MatchSubstitution[] @relation("PlayerIn")
+  events    MatchEvent[]
+  sanctions Sanction[]
 
   @@index([teamId])
 }
