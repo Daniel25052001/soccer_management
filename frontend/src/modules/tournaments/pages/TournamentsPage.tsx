@@ -18,21 +18,21 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import type { Tournament } from '../../../types';
 import { getTournaments } from '../services/tournaments.service';
+import { CreateTournamentDialog } from '../components/CreateTournamentDialog';
 
 /**
- * Vista principal de administración y listado de torneos en la PWA GolAdmin.
- * Renderiza la tabla de datos consumiendo los registros desde la API REST NestJS.
+ * Vista principal de administración y consulta de torneos para GolAdmin PWA.
  * 
- * @returns {JSX.Element} Componente React con maquetación de Material UI.
+ * @returns {JSX.Element} Componente maquetado con Material UI.
  */
 export const TournamentsPage: React.FC = () => {
     const [tournaments, setTournaments] = useState<Tournament[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [openCreateModal, setOpenCreateModal] = useState<boolean>(false);
 
     /**
-     * Obtiene la lista actualizada de torneos desde el backend.
-     * Se utiliza useCallback para evitar advertencias de react-hooks/exhaustive-deps.
+     * Ejecuta la petición al servicio para obtener la lista de torneos.
      */
     const fetchTournaments = useCallback(async () => {
         try {
@@ -42,7 +42,7 @@ export const TournamentsPage: React.FC = () => {
             setTournaments(data);
         } catch (error) {
             console.error('Error al cargar torneos desde la API:', error);
-            setErrorMessage('No se pudo conectar con el servidor para obtener los torneos.');
+            setErrorMessage('No se pudo establecer conexión con el servidor de GolAdmin.');
         } finally {
             setLoading(false);
         }
@@ -51,14 +51,6 @@ export const TournamentsPage: React.FC = () => {
     useEffect(() => {
         fetchTournaments();
     }, [fetchTournaments]);
-
-    /**
-     * Manejador para la apertura del formulario de creación de nuevo torneo.
-     */
-    const handleOpenCreateModal = () => {
-        // TODO: Conectar con el componente Modal/Dialog de creación
-        console.log('Abrir modal de creación de torneo');
-    };
 
     return (
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -77,7 +69,7 @@ export const TournamentsPage: React.FC = () => {
                     variant="contained"
                     color="primary"
                     startIcon={<AddIcon />}
-                    onClick={handleOpenCreateModal}
+                    onClick={() => setOpenCreateModal(true)}
                 >
                     Nuevo Torneo
                 </Button>
@@ -135,6 +127,13 @@ export const TournamentsPage: React.FC = () => {
                     </Table>
                 </TableContainer>
             )}
+
+            {/* Modal de Creación */}
+            <CreateTournamentDialog
+                open={openCreateModal}
+                onClose={() => setOpenCreateModal(false)}
+                onSuccess={fetchTournaments}
+            />
         </Container>
     );
 };
