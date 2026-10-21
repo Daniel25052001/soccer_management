@@ -67,7 +67,6 @@ export const CreateTournamentDialog: React.FC<CreateTournamentDialogProps> = ({
             setLoading(true);
             setError(null);
 
-            // Limpiar fechas vacías a null para la API
             const payload: CreateTournamentDto = {
                 ...formData,
                 description: formData.description || null,
