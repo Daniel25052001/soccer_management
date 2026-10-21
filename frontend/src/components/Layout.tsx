@@ -4,6 +4,7 @@ import { Link, Outlet } from 'react-router-dom';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import GroupsIcon from '@mui/icons-material/Groups';
 import PersonIcon from '@mui/icons-material/Person';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 
 export const Layout: React.FC = () => {
     return (
@@ -21,6 +22,9 @@ export const Layout: React.FC = () => {
                     </Button>
                     <Button color="inherit" component={Link} to="/players" startIcon={<PersonIcon />}>
                         Jugadores
+                    </Button>
+                    <Button color="inherit" component={Link} to="/matches" startIcon={<CalendarMonthIcon />}>
+                        Partidos
                     </Button>
                 </Toolbar>
             </AppBar>

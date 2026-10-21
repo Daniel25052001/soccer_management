@@ -69,3 +69,54 @@ export interface Player {
 
 export type CreatePlayerDto = Omit<Player, 'id' | 'createdAt' | 'team'>;
 
+
+/**
+ * Estados del ciclo de vida de un partido.
+ */
+export const MatchStatus = {
+    SCHEDULED: 'SCHEDULED',
+    IN_PROGRESS: 'IN_PROGRESS',
+    FINISHED: 'FINISHED',
+    POSTPONED: 'POSTPONED',
+    CANCELLED: 'CANCELLED',
+} as const;
+
+export type MatchStatus = typeof MatchStatus[keyof typeof MatchStatus];
+
+/**
+ * Entidad Partido que representa un encuentro programado o jugado.
+ */
+export interface Match {
+    id: number;
+    tournamentId: number;
+    homeTeamId: number;
+    awayTeamId: number;
+    matchDate?: string | null;
+    location?: string | null;
+    fieldNumber?: string | null;
+    homeScore?: number | null;
+    awayScore?: number | null;
+    status: MatchStatus;
+    createdAt: string;
+    // Relaciones pobladas desde la API
+    tournament?: Tournament;
+    homeTeam?: Team;
+    awayTeam?: Team;
+}
+
+/**
+ * DTO para la programación de un nuevo partido.
+ */
+export type CreateMatchDto = Omit<
+    Match,
+    'id' | 'createdAt' | 'tournament' | 'homeTeam' | 'awayTeam' | 'homeScore' | 'awayScore'
+>;
+
+/**
+ * DTO para la actualización de marcador o estado de un partido.
+ */
+export type UpdateMatchDto = Partial<CreateMatchDto> & {
+    homeScore?: number | null;
+    awayScore?: number | null;
+    status?: MatchStatus;
+};
