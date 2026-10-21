@@ -4,10 +4,8 @@ import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { Layout } from './components/Layout';
 import { TournamentsPage } from './modules/tournaments/pages/TournamentsPage';
 import { TeamsPage } from './modules/teams/pages/TeamsPage';
+import { PlayersPage } from './modules/players/pages/PlayersPage';
 
-/**
- * Tema global de Material UI para GolAdmin PWA.
- */
 const theme = createTheme({
   palette: {
     primary: {
@@ -19,11 +17,6 @@ const theme = createTheme({
   },
 });
 
-/**
- * Componente raíz de la PWA con enrutamiento y proveedores de tema.
- * 
- * @returns {JSX.Element} Árbol de componentes principal.
- */
 export const App: React.FC = () => {
   return (
     <ThemeProvider theme={theme}>
@@ -34,6 +27,7 @@ export const App: React.FC = () => {
             <Route index element={<Navigate to="/tournaments" replace />} />
             <Route path="tournaments" element={<TournamentsPage />} />
             <Route path="teams" element={<TeamsPage />} />
+            <Route path="players" element={<PlayersPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

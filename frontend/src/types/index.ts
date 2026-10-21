@@ -13,44 +13,59 @@ export type TournamentStatus = typeof TournamentStatus[keyof typeof TournamentSt
 
 /**
  * Representa la entidad Torneo retornada por la API REST de NestJS.
- * Se incluyen tipos de unión con 'null' para compatibilidad estricta con Prisma ORM.
  */
 export interface Tournament {
-    /** Identificador único autonumérico del torneo */
     id: number;
-    /** Nombre oficial del torneo */
     name: string;
-    /** Descripción opcional o detalles organizativos */
     description?: string | null;
-    /** Fecha estimada o real de inicio (ISO String) */
     startDate: string;
-    /** Fecha estimada de finalización (ISO String) */
     endDate?: string | null;
-    /** Estado del torneo dentro de la competencia */
     status: TournamentStatus;
-    /** Marca de tiempo de creación en la base de datos */
     createdAt: string;
 }
 
-/**
- * Representa la estructura de datos requerida para crear o actualizar un torneo.
- */
 export type CreateTournamentDto = Omit<Tournament, 'id' | 'createdAt'>;
 
 /**
  * Representa un equipo participante registrado en la plataforma.
  */
 export interface Team {
-    /** Identificador único autonumérico del equipo */
     id: number;
-    /** ID opcional del torneo al cual se inscribe */
     tournamentId?: number | null;
-    /** Nombre representativo del club o equipo */
     name: string;
-    /** Nombre del delegado o representante principal */
     delegateName?: string | null;
-    /** Teléfono de contacto del delegado */
     delegatePhone?: string | null;
-    /** Fecha de registro en el sistema */
     createdAt: string;
 }
+
+export type CreateTeamDto = Omit<Team, 'id' | 'createdAt'>;
+
+/**
+ * Posiciones tácticas para jugadores de fútbol 11.
+ */
+export const PlayerPosition = {
+    GOALKEEPER: 'GOALKEEPER',
+    DEFENDER: 'DEFENDER',
+    MIDFIELDER: 'MIDFIELDER',
+    FORWARD: 'FORWARD',
+} as const;
+
+export type PlayerPosition = typeof PlayerPosition[keyof typeof PlayerPosition];
+
+/**
+ * Representa a un jugador alineado con el esquema de Prisma en NestJS.
+ */
+export interface Player {
+    id: number;
+    teamId: number;
+    firstName: string;
+    lastName: string;
+    documentId?: string | null;
+    defaultDorsal?: number | null;
+    position?: PlayerPosition | null;
+    createdAt: string;
+    team?: Team;
+}
+
+export type CreatePlayerDto = Omit<Player, 'id' | 'createdAt' | 'team'>;
+

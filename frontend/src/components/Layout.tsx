@@ -3,41 +3,24 @@ import { AppBar, Toolbar, Typography, Button, Container, Box } from '@mui/materi
 import { Link, Outlet } from 'react-router-dom';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import GroupsIcon from '@mui/icons-material/Groups';
+import PersonIcon from '@mui/icons-material/Person';
 
-/**
- * Layout principal de la PWA GolAdmin.
- * Provee la barra de navegación superior (Navbar) fija y el contenedor
- * dinámico (Outlet) donde se renderizan las vistas de Torneos y Equipos.
- * 
- * @returns {JSX.Element} Estructura base con AppBar y área de contenido.
- */
 export const Layout: React.FC = () => {
     return (
         <Box sx={{ flexGrow: 1 }}>
             <AppBar position="static">
                 <Toolbar>
-                    <Typography
-                        variant="h6"
-                        component="div"
-                        sx={{ flexGrow: 1, fontWeight: 'bold' }}
-                    >
+                    <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
                         GolAdmin PWA
                     </Typography>
-                    <Button
-                        color="inherit"
-                        component={Link}
-                        to="/tournaments"
-                        startIcon={<EmojiEventsIcon />}
-                    >
+                    <Button color="inherit" component={Link} to="/tournaments" startIcon={<EmojiEventsIcon />}>
                         Torneos
                     </Button>
-                    <Button
-                        color="inherit"
-                        component={Link}
-                        to="/teams"
-                        startIcon={<GroupsIcon />}
-                    >
+                    <Button color="inherit" component={Link} to="/teams" startIcon={<GroupsIcon />}>
                         Equipos
+                    </Button>
+                    <Button color="inherit" component={Link} to="/players" startIcon={<PersonIcon />}>
+                        Jugadores
                     </Button>
                 </Toolbar>
             </AppBar>
