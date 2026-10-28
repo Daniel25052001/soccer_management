@@ -41,7 +41,7 @@ export interface Team {
 export type CreateTeamDto = Omit<Team, 'id' | 'createdAt'>;
 
 /**
- * Posiciones tácticas para jugadores de fútbol 11.
+ * Posiciones tácticas para jugadores de fútbol.
  */
 export const PlayerPosition = {
     GOALKEEPER: 'GOALKEEPER',
@@ -69,7 +69,6 @@ export interface Player {
 
 export type CreatePlayerDto = Omit<Player, 'id' | 'createdAt' | 'team'>;
 
-
 /**
  * Estados del ciclo de vida de un partido.
  */
@@ -91,11 +90,17 @@ export interface Match {
     tournamentId: number;
     homeTeamId: number;
     awayTeamId: number;
-    matchDate?: string | null;
+    matchDate: string;
     location?: string | null;
     fieldNumber?: string | null;
-    homeScore?: number | null;
-    awayScore?: number | null;
+    homeScore: number;
+    awayScore: number;
+    homeSubsUsed?: number;
+    homeWindowsUsed?: number;
+    awaySubsUsed?: number;
+    awayWindowsUsed?: number;
+    homeArbitragePaid?: boolean;
+    awayArbitragePaid?: boolean;
     status: MatchStatus;
     createdAt: string;
     // Relaciones pobladas desde la API
@@ -107,16 +112,26 @@ export interface Match {
 /**
  * DTO para la programación de un nuevo partido.
  */
-export type CreateMatchDto = Omit<
-    Match,
-    'id' | 'createdAt' | 'tournament' | 'homeTeam' | 'awayTeam' | 'homeScore' | 'awayScore'
->;
+export interface CreateMatchDto {
+    tournamentId: number;
+    homeTeamId: number;
+    awayTeamId: number;
+    matchDate: string;
+    location?: string | null;
+    fieldNumber?: string | null;
+    status?: MatchStatus;
+    homeArbitragePaid?: boolean;
+    awayArbitragePaid?: boolean;
+}
 
 /**
- * DTO para la actualización de marcador o estado de un partido.
+ * DTO para la actualización de marcador, estado o estadísticas de un partido.
  */
-export type UpdateMatchDto = Partial<CreateMatchDto> & {
-    homeScore?: number | null;
-    awayScore?: number | null;
-    status?: MatchStatus;
-};
+export interface UpdateMatchDto extends Partial<CreateMatchDto> {
+    homeScore?: number;
+    awayScore?: number;
+    homeSubsUsed?: number;
+    homeWindowsUsed?: number;
+    awaySubsUsed?: number;
+    awayWindowsUsed?: number;
+}

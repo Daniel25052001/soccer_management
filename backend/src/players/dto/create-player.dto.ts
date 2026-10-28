@@ -37,6 +37,14 @@ export class CreatePlayerDto {
     documentId: string;
 
     /**
+     * Posición en el campo (ej: Portero, Defensa, Mediocampista, Delantero).
+     * @example "Defensa"
+     */
+    @IsString({ message: 'La posición debe ser una cadena de texto.' })
+    @IsOptional()
+    position?: string;
+
+    /**
      * Número de dorsal/camiseta habitual del jugador (1-99).
      * @example 8
      */

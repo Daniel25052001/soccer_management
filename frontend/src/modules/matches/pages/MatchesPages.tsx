@@ -2,42 +2,43 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
     Typography,
     Button,
+    Paper,
+    Box,
+    CircularProgress,
+    Alert,
+    IconButton,
+    Chip,
     Table,
     TableBody,
     TableCell,
     TableContainer,
     TableHead,
     TableRow,
-    Paper,
-    Box,
-    CircularProgress,
-    Alert,
-    IconButton,
     Tooltip,
-    Chip,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import SportsScoreIcon from '@mui/icons-material/SportsScore';
 import DeleteIcon from '@mui/icons-material/Delete';
-import type { Match, MatchStatus, Team, Tournament } from '../../../types';
+import EditIcon from '@mui/icons-material/Edit'; // <--- 1. Importamos el icono de editar
+import type { Match, Team, Tournament } from '../../../types';
 import { deleteMatch, getMatches } from '../services/matches.service';
-import { getTournaments } from '../../tournaments/services/tournaments.service';
 import { getTeams } from '../../teams/services/teams.service';
+import { getTournaments } from '../../tournaments/services/tournaments.service';
 import { CreateMatchDialog } from '../components/CreateMatchDialog';
-import { UpdateScoreDialog } from '../components/UpdateScoreDialog';
 import { ConfirmDeleteDialog } from '../../../components/ConfirmDeleteDialog';
 
 export const MatchesPage: React.FC = () => {
     const [matches, setMatches] = useState<Match[]>([]);
-    const [tournaments, setTournaments] = useState<Tournament[]>([]);
     const [teams, setTeams] = useState<Team[]>([]);
+    const [tournaments, setTournaments] = useState<Tournament[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-    // Modales
     const [openCreateModal, setOpenCreateModal] = useState<boolean>(false);
     const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
-    const [openScoreModal, setOpenScoreModal] = useState<boolean>(false);
+
+    // Nuevo estado para controlar qué partido se va a editar (si es null, el modal está en modo Creación)
+    const [matchToEdit, setMatchToEdit] = useState<Match | null>(null);
+
     const [openDeleteDialog, setOpenDeleteDialog] = useState<boolean>(false);
     const [deleting, setDeleting] = useState<boolean>(false);
 
@@ -45,17 +46,17 @@ export const MatchesPage: React.FC = () => {
         try {
             setLoading(true);
             setErrorMessage(null);
-            const [matchesData, tournsData, teamsData] = await Promise.all([
+            const [matchesData, teamsData, tournamentsData] = await Promise.all([
                 getMatches(),
-                getTournaments(),
                 getTeams(),
+                getTournaments(),
             ]);
             setMatches(matchesData);
-            setTournaments(tournsData);
             setTeams(teamsData);
+            setTournaments(tournamentsData);
         } catch (error) {
-            console.error('Error al cargar fixture:', error);
-            setErrorMessage('No se pudo establecer comunicación con el servidor de GolAdmin.');
+            console.error('Error al cargar partidos:', error);
+            setErrorMessage('No se pudieron obtener los datos de los partidos.');
         } finally {
             setLoading(false);
         }
@@ -65,52 +66,40 @@ export const MatchesPage: React.FC = () => {
         fetchData();
     }, [fetchData]);
 
-    const getTeamName = (teamId: number, teamRelation?: Team) => {
-        if (teamRelation) return teamRelation.name;
-        const found = teams.find((t) => t.id === teamId);
-        return found ? found.name : `Equipo #${teamId}`;
-    };
-
-    const renderStatusChip = (status: MatchStatus) => {
-        switch (status) {
-            case 'SCHEDULED':
-                return <Chip label="Programado" color="info" size="small" />;
-            case 'IN_PROGRESS':
-                return <Chip label="En Juego" color="warning" size="small" />;
-            case 'FINISHED':
-                return <Chip label="Finalizado" color="success" size="small" />;
-            case 'POSTPONED':
-                return <Chip label="Aplazado" color="default" size="small" />;
-            case 'CANCELLED':
-                return <Chip label="Cancelado" color="error" size="small" />;
-            default:
-                return <Chip label={status} size="small" />;
-        }
-    };
-
-    const handleOpenScore = (match: Match) => {
-        setSelectedMatch(match);
-        setOpenScoreModal(true);
-    };
-
-    const handleOpenDelete = (match: Match) => {
-        setSelectedMatch(match);
-        setOpenDeleteDialog(true);
-    };
-
     const confirmDelete = async () => {
         if (!selectedMatch) return;
         try {
             setDeleting(true);
+            setErrorMessage(null);
             await deleteMatch(selectedMatch.id);
             setOpenDeleteDialog(false);
             setSelectedMatch(null);
             fetchData();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error al eliminar partido:', error);
-            setErrorMessage('No se pudo eliminar el partido seleccionado.');
+            const backendMessage = error?.response?.data?.message;
+            // Gracias al cambio en el backend, aquí recibiremos el mensaje claro de que tiene sanciones o registros asociados
+            setErrorMessage(
+                typeof backendMessage === 'string'
+                    ? backendMessage
+                    : 'No se pudo eliminar el partido seleccionado.'
+            );
+            setOpenDeleteDialog(false);
         } finally {
             setDeleting(false);
+        }
+    };
+
+    const getStatusChip = (status: string) => {
+        switch (status) {
+            case 'FINISHED':
+                return <Chip label="Finalizado" color="success" size="small" />;
+            case 'IN_PROGRESS':
+                return <Chip label="En Juego" color="secondary" size="small" />;
+            case 'POSTPONED':
+                return <Chip label="Aplazado" color="warning" size="small" />;
+            default:
+                return <Chip label="Programado" color="default" size="small" />;
         }
     };
 
@@ -118,20 +107,23 @@ export const MatchesPage: React.FC = () => {
         <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
-                    Programación y Fixture
+                    Calendario de Partidos
                 </Typography>
                 <Button
                     variant="contained"
                     color="primary"
                     startIcon={<AddIcon />}
-                    onClick={() => setOpenCreateModal(true)}
+                    onClick={() => {
+                        setMatchToEdit(null); // Nos aseguramos que nazca limpio para crear
+                        setOpenCreateModal(true);
+                    }}
                 >
                     Programar Partido
                 </Button>
             </Box>
 
             {errorMessage && (
-                <Alert severity="error" sx={{ mb: 3 }}>
+                <Alert severity="error" sx={{ mb: 3 }} onClose={() => setErrorMessage(null)}>
                     {errorMessage}
                 </Alert>
             )}
@@ -145,11 +137,11 @@ export const MatchesPage: React.FC = () => {
                     <Table>
                         <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                             <TableRow>
-                                <TableCell><b>Fecha / Hora</b></TableCell>
+                                <TableCell><b>Fecha y Hora</b></TableCell>
+                                <TableCell><b>Torneo</b></TableCell>
                                 <TableCell align="right"><b>Local</b></TableCell>
-                                <TableCell align="center"><b>Marcador</b></TableCell>
+                                <TableCell align="center"><b>Resultado</b></TableCell>
                                 <TableCell align="left"><b>Visitante</b></TableCell>
-                                <TableCell><b>Sede / Cancha</b></TableCell>
                                 <TableCell align="center"><b>Estado</b></TableCell>
                                 <TableCell align="center"><b>Acciones</b></TableCell>
                             </TableRow>
@@ -158,41 +150,50 @@ export const MatchesPage: React.FC = () => {
                             {matches.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={7} align="center">
-                                        No hay partidos programados en la base de datos.
+                                        No hay partidos programados en el sistema.
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                matches.map((m) => (
-                                    <TableRow key={m.id} hover>
+                                matches.map((match) => (
+                                    <TableRow key={match.id} hover>
                                         <TableCell>
-                                            {m.matchDate
-                                                ? new Date(m.matchDate).toLocaleString('es-CO', {
-                                                    dateStyle: 'short',
-                                                    timeStyle: 'short',
-                                                })
-                                                : 'Por definir'}
+                                            {new Date(match.matchDate).toLocaleString('es-CO', {
+                                                dateStyle: 'short',
+                                                timeStyle: 'short',
+                                            })}
                                         </TableCell>
-                                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                                            {getTeamName(m.homeTeamId, m.homeTeam)}
-                                        </TableCell>
-                                        <TableCell align="center" sx={{ fontWeight: 'bold', fontSize: '1.1rem' }}>
-                                            {m.homeScore ?? '-'} : {m.awayScore ?? '-'}
-                                        </TableCell>
-                                        <TableCell align="left" sx={{ fontWeight: 'bold' }}>
-                                            {getTeamName(m.awayTeamId, m.awayTeam)}
-                                        </TableCell>
-                                        <TableCell>
-                                            {m.location ? `${m.location} ${m.fieldNumber ? `(Cancha ${m.fieldNumber})` : ''}` : '-'}
-                                        </TableCell>
-                                        <TableCell align="center">{renderStatusChip(m.status)}</TableCell>
+                                        <TableCell>{match.tournament?.name || `Torneo #${match.tournamentId}`}</TableCell>
+                                        <TableCell align="right"><b>{match.homeTeam?.name}</b></TableCell>
                                         <TableCell align="center">
-                                            <Tooltip title="Actualizar Marcador">
-                                                <IconButton color="primary" onClick={() => handleOpenScore(m)}>
-                                                    <SportsScoreIcon />
+                                            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                                                {match.status === 'SCHEDULED' ? 'vs' : `${match.homeScore} - ${match.awayScore}`}
+                                            </Typography>
+                                        </TableCell>
+                                        <TableCell align="left"><b>{match.awayTeam?.name}</b></TableCell>
+                                        <TableCell align="center">{getStatusChip(match.status)}</TableCell>
+                                        <TableCell align="center">
+                                            {/* 2. Botón de Editar (Lápiz) */}
+                                            <Tooltip title="Editar Partido">
+                                                <IconButton
+                                                    color="primary"
+                                                    onClick={() => {
+                                                        setMatchToEdit(match);     // Cargamos los datos del partido a editar
+                                                        setOpenCreateModal(true); // Abrimos el diálogo unificado
+                                                    }}
+                                                >
+                                                    <EditIcon />
                                                 </IconButton>
                                             </Tooltip>
-                                            <Tooltip title="Eliminar">
-                                                <IconButton color="error" onClick={() => handleOpenDelete(m)}>
+
+                                            {/* Botón de Eliminar (Papelera) */}
+                                            <Tooltip title="Eliminar Partido">
+                                                <IconButton
+                                                    color="error"
+                                                    onClick={() => {
+                                                        setSelectedMatch(match);
+                                                        setOpenDeleteDialog(true);
+                                                    }}
+                                                >
                                                     <DeleteIcon />
                                                 </IconButton>
                                             </Tooltip>
@@ -205,28 +206,27 @@ export const MatchesPage: React.FC = () => {
                 </TableContainer>
             )}
 
+            {/* 3. Diálogo unificado que soporta Creación y Edición */}
             <CreateMatchDialog
                 open={openCreateModal}
                 tournaments={tournaments}
                 teams={teams}
-                onClose={() => setOpenCreateModal(false)}
-                onSuccess={fetchData}
-            />
-
-            <UpdateScoreDialog
-                open={openScoreModal}
-                match={selectedMatch}
+                matchToEdit={matchToEdit} // Pasamos el partido a editar (si es null, creará uno nuevo)
                 onClose={() => {
-                    setOpenScoreModal(false);
-                    setSelectedMatch(null);
+                    setOpenCreateModal(false);
+                    setMatchToEdit(null);
                 }}
-                onSuccess={fetchData}
+                onSuccess={() => {
+                    fetchData();
+                    setOpenCreateModal(false);
+                    setMatchToEdit(null);
+                }}
             />
 
             <ConfirmDeleteDialog
                 open={openDeleteDialog}
                 title="¿Eliminar Partido?"
-                description="¿Estás seguro de que deseas eliminar la programación de este partido?"
+                description={`¿Estás seguro de que deseas eliminar el enfrentamiento entre "${selectedMatch?.homeTeam?.name}" y "${selectedMatch?.awayTeam?.name}"?`}
                 loading={deleting}
                 onClose={() => {
                     setOpenDeleteDialog(false);

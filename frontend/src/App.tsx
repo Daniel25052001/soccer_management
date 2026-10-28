@@ -5,7 +5,7 @@ import { Layout } from './components/Layout';
 import { TournamentsPage } from './modules/tournaments/pages/TournamentsPage';
 import { TeamsPage } from './modules/teams/pages/TeamsPage';
 import { PlayersPage } from './modules/players/pages/PlayersPage';
-
+import { MatchesPage } from './modules/matches/pages/MatchesPages';
 const theme = createTheme({
   palette: {
     primary: {
@@ -16,7 +16,6 @@ const theme = createTheme({
     },
   },
 });
-
 export const App: React.FC = () => {
   return (
     <ThemeProvider theme={theme}>
@@ -28,6 +27,7 @@ export const App: React.FC = () => {
             <Route path="tournaments" element={<TournamentsPage />} />
             <Route path="teams" element={<TeamsPage />} />
             <Route path="players" element={<PlayersPage />} />
+            <Route path="matches" element={<MatchesPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
