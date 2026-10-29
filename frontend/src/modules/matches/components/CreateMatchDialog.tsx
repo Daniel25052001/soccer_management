@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 
 // Importa tipos de TypeScript definidos globalmente para DTOs de creación de partidos, equipos y torneos.
-import type { CreateMatchDto, Team, Tournament } from '../../../types';
+import type { Match, CreateMatchDto, Team, Tournament } from '../../../types';
 
 // Importa la función de servicio encargada de realizar la petición HTTP para crear un partido.
 import { createMatch } from '../services/matches.service';

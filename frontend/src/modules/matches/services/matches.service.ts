@@ -31,10 +31,11 @@ export const createMatch = async (data: CreateMatchDto): Promise<Match> => {
  * @param {UpdateMatchDto} data Datos parciales a modificar.
  * @returns {Promise<Match>} Promesa con el partido actualizado.
  */
-export const updateMatch = async (id: number, data: UpdateMatchDto) => {
-    const response = await apiClient.patch(`/api/matches/${id}`, data);
+export const updateMatch = async (id: number, data: UpdateMatchDto): Promise<Match> => {
+    const response = await apiClient.patch<Match>(`/matches/${id}`, data);
     return response.data;
 };
+
 /**
  * Elimina un partido programado de la base de datos.
  * 

@@ -18,30 +18,38 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit'; // <--- 1. Importamos el icono de editar
+import EditIcon from '@mui/icons-material/Edit';
+import SportsIcon from '@mui/icons-material/Sports'; // Icono para abrir el Acta de Eventos
 import type { Match, Team, Tournament } from '../../../types';
 import { deleteMatch, getMatches } from '../services/matches.service';
 import { getTeams } from '../../teams/services/teams.service';
 import { getTournaments } from '../../tournaments/services/tournaments.service';
 import { CreateMatchDialog } from '../components/CreateMatchDialog';
 import { ConfirmDeleteDialog } from '../../../components/ConfirmDeleteDialog';
+import { MatchEventsModal } from '../components/MatchEventsModal';// Importamos el modal del acta en tiempo real
 
 export const MatchesPage: React.FC = () => {
+    // Estados principales para la gestión de datos
     const [matches, setMatches] = useState<Match[]>([]);
     const [teams, setTeams] = useState<Team[]>([]);
     const [tournaments, setTournaments] = useState<Tournament[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+    // Estados para modales de creación, edición y eliminación de partidos
     const [openCreateModal, setOpenCreateModal] = useState<boolean>(false);
     const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
-
-    // Nuevo estado para controlar qué partido se va a editar (si es null, el modal está en modo Creación)
     const [matchToEdit, setMatchToEdit] = useState<Match | null>(null);
-
     const [openDeleteDialog, setOpenDeleteDialog] = useState<boolean>(false);
     const [deleting, setDeleting] = useState<boolean>(false);
 
+    // Estados para controlar el modal del Acta de Eventos en vivo
+    const [openEventsModal, setOpenEventsModal] = useState<boolean>(false);
+    const [matchForEvents, setMatchForEvents] = useState<Match | null>(null);
+
+    /**
+     * Carga de forma asíncrona los partidos, equipos y torneos concurrentemente.
+     */
     const fetchData = useCallback(async () => {
         try {
             setLoading(true);
@@ -66,6 +74,9 @@ export const MatchesPage: React.FC = () => {
         fetchData();
     }, [fetchData]);
 
+    /**
+     * Ejecuta la eliminación lógica/física de un partido validando restricciones del backend.
+     */
     const confirmDelete = async () => {
         if (!selectedMatch) return;
         try {
@@ -78,7 +89,6 @@ export const MatchesPage: React.FC = () => {
         } catch (error: any) {
             console.error('Error al eliminar partido:', error);
             const backendMessage = error?.response?.data?.message;
-            // Gracias al cambio en el backend, aquí recibiremos el mensaje claro de que tiene sanciones o registros asociados
             setErrorMessage(
                 typeof backendMessage === 'string'
                     ? backendMessage
@@ -90,6 +100,9 @@ export const MatchesPage: React.FC = () => {
         }
     };
 
+    /**
+     * Retorna un componente Chip estilizado según el estado actual del partido.
+     */
     const getStatusChip = (status: string) => {
         switch (status) {
             case 'FINISHED':
@@ -105,6 +118,7 @@ export const MatchesPage: React.FC = () => {
 
     return (
         <Box>
+            {/* Cabecera de la vista con título y botón de acción principal */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
                     Calendario de Partidos
@@ -114,7 +128,7 @@ export const MatchesPage: React.FC = () => {
                     color="primary"
                     startIcon={<AddIcon />}
                     onClick={() => {
-                        setMatchToEdit(null); // Nos aseguramos que nazca limpio para crear
+                        setMatchToEdit(null);
                         setOpenCreateModal(true);
                     }}
                 >
@@ -122,12 +136,14 @@ export const MatchesPage: React.FC = () => {
                 </Button>
             </Box>
 
+            {/* Alerta de errores globales */}
             {errorMessage && (
                 <Alert severity="error" sx={{ mb: 3 }} onClose={() => setErrorMessage(null)}>
                     {errorMessage}
                 </Alert>
             )}
 
+            {/* Contenido principal: Indicador de carga o tabla de datos */}
             {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', my: 5 }}>
                     <CircularProgress />
@@ -172,20 +188,33 @@ export const MatchesPage: React.FC = () => {
                                         <TableCell align="left"><b>{match.awayTeam?.name}</b></TableCell>
                                         <TableCell align="center">{getStatusChip(match.status)}</TableCell>
                                         <TableCell align="center">
-                                            {/* 2. Botón de Editar (Lápiz) */}
+                                            {/* Botón para abrir el Acta de Eventos en vivo (Goles/Tarjetas) */}
+                                            <Tooltip title="Acta del Partido (Eventos)">
+                                                <IconButton
+                                                    color="secondary"
+                                                    onClick={() => {
+                                                        setMatchForEvents(match);
+                                                        setOpenEventsModal(true);
+                                                    }}
+                                                >
+                                                    <SportsIcon />
+                                                </IconButton>
+                                            </Tooltip>
+
+                                            {/* Botón de Editar Partido */}
                                             <Tooltip title="Editar Partido">
                                                 <IconButton
                                                     color="primary"
                                                     onClick={() => {
-                                                        setMatchToEdit(match);     // Cargamos los datos del partido a editar
-                                                        setOpenCreateModal(true); // Abrimos el diálogo unificado
+                                                        setMatchToEdit(match);
+                                                        setOpenCreateModal(true);
                                                     }}
                                                 >
                                                     <EditIcon />
                                                 </IconButton>
                                             </Tooltip>
 
-                                            {/* Botón de Eliminar (Papelera) */}
+                                            {/* Botón de Eliminar Partido */}
                                             <Tooltip title="Eliminar Partido">
                                                 <IconButton
                                                     color="error"
@@ -206,12 +235,12 @@ export const MatchesPage: React.FC = () => {
                 </TableContainer>
             )}
 
-            {/* 3. Diálogo unificado que soporta Creación y Edición */}
+            {/* Diálogo unificado para Crear y Editar Partidos */}
             <CreateMatchDialog
                 open={openCreateModal}
                 tournaments={tournaments}
                 teams={teams}
-                matchToEdit={matchToEdit} // Pasamos el partido a editar (si es null, creará uno nuevo)
+                matchToEdit={matchToEdit}
                 onClose={() => {
                     setOpenCreateModal(false);
                     setMatchToEdit(null);
@@ -223,6 +252,18 @@ export const MatchesPage: React.FC = () => {
                 }}
             />
 
+            {/* Modal para gestionar el Acta de Eventos en Tiempo Real (Goles y Tarjetas) */}
+            <MatchEventsModal
+                open={openEventsModal}
+                match={matchForEvents}
+                onClose={() => {
+                    setOpenEventsModal(false);
+                    setMatchForEvents(null);
+                }}
+                onScoreUpdated={fetchData}
+            />
+
+            {/* Diálogo de confirmación para eliminar un partido */}
             <ConfirmDeleteDialog
                 open={openDeleteDialog}
                 title="¿Eliminar Partido?"

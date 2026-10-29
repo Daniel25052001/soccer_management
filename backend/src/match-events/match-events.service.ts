@@ -15,7 +15,7 @@ export class MatchEventsService {
    * Registra un nuevo evento y actualiza el marcador si el evento es un gol.
    */
   async create(createMatchEventDto: CreateMatchEventDto) {
-    const { matchId, teamId, playerId, eventType } = createMatchEventDto;
+    const { matchId, teamId, playerId, eventType, minute } = createMatchEventDto;
 
     const match = await this.prisma.match.findUnique({ where: { id: matchId } });
     if (!match) throw new NotFoundException(`El partido con ID ${matchId} no existe.`);
@@ -29,9 +29,15 @@ export class MatchEventsService {
       );
     }
 
-    // Persistir el evento
+    // Persistir el evento mapeando eventType a type para Prisma
     const event = await this.prisma.matchEvent.create({
-      data: createMatchEventDto,
+      data: {
+        matchId,
+        teamId,
+        playerId,
+        type: eventType,
+        minute,
+      },
       include: {
         player: true,
         team: true,
@@ -73,8 +79,8 @@ export class MatchEventsService {
     const deletedEvent = await this.prisma.matchEvent.delete({ where: { id } });
 
     if (
-      event.eventType === EventType.GOAL ||
-      event.eventType === EventType.OWN_GOAL
+      event.type === EventType.GOAL ||
+      event.type === EventType.OWN_GOAL
     ) {
       await this.updateMatchScore(event.matchId);
     }
@@ -95,10 +101,10 @@ export class MatchEventsService {
     let awayScore = 0;
 
     for (const e of events) {
-      if (e.eventType === EventType.GOAL) {
+      if (e.type === EventType.GOAL) {
         if (e.teamId === match.homeTeamId) homeScore++;
         if (e.teamId === match.awayTeamId) awayScore++;
-      } else if (e.eventType === EventType.OWN_GOAL) {
+      } else if (e.type === EventType.OWN_GOAL) {
         // Un autogol suma un gol al rival
         if (e.teamId === match.homeTeamId) awayScore++;
         if (e.teamId === match.awayTeamId) homeScore++;

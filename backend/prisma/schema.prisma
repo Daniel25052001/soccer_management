@@ -40,8 +40,8 @@ model Tournament {
   status      TournamentStatus @default(DRAFT)
   createdAt   DateTime         @default(now())
 
-  teams   Team[]
-  matches Match[]
+  teams       Team[]
+  matches     Match[]
 }
 
 model Team {
@@ -70,43 +70,43 @@ model Player {
   lastName      String
   documentId    String   @unique
   defaultDorsal Int?
-  position      String?   
+  position      String?    
   createdAt     DateTime @default(now())
 
-  team      Team                @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  rosters   MatchRoster[]
-  subsOut   MatchSubstitution[] @relation("PlayerOut")
-  subsIn    MatchSubstitution[] @relation("PlayerIn")
-  events    MatchEvent[]
-  sanctions Sanction[]
+  team          Team                @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  rosters       MatchRoster[]
+  subsOut       MatchSubstitution[] @relation("PlayerOut")
+  subsIn        MatchSubstitution[] @relation("PlayerIn")
+  events        MatchEvent[]
+  sanctions     Sanction[]
 
   @@index([teamId])
 }
 
 model Match {
-  id                Int         @id @default(autoincrement())
-  tournamentId      Int
-  homeTeamId        Int
-  awayTeamId        Int
-  matchDate         DateTime
-  status            MatchStatus @default(SCHEDULED)
-  homeScore         Int         @default(0)
-  awayScore         Int         @default(0)
-  homeSubsUsed      Int         @default(0)
-  homeWindowsUsed   Int         @default(0)
-  awaySubsUsed      Int         @default(0)
-  awayWindowsUsed   Int         @default(0)
-  homeArbitragePaid Boolean     @default(false)
-  awayArbitragePaid Boolean     @default(false)
-  createdAt         DateTime    @default(now())
+  id                  Int         @id @default(autoincrement())
+  tournamentId        Int
+  homeTeamId          Int
+  awayTeamId          Int
+  matchDate           DateTime
+  status              MatchStatus @default(SCHEDULED)
+  homeScore           Int         @default(0)
+  awayScore           Int         @default(0)
+  homeSubsUsed        Int         @default(0)
+  homeWindowsUsed     Int         @default(0)
+  awaySubsUsed        Int         @default(0)
+  awayWindowsUsed     Int         @default(0)
+  homeArbitragePaid   Boolean     @default(false)
+  awayArbitragePaid   Boolean     @default(false)
+  createdAt           DateTime    @default(now())
 
-  tournament    Tournament          @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  homeTeam      Team                @relation("HomeTeam", fields: [homeTeamId], references: [id])
-  awayTeam      Team                @relation("AwayTeam", fields: [awayTeamId], references: [id])
-  rosters       MatchRoster[]
-  substitutions MatchSubstitution[]
-  events        MatchEvent[]
-  sanctions     Sanction[]
+  tournament          Tournament          @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  homeTeam            Team                @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam            Team                @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  rosters             MatchRoster[]
+  substitutions       MatchSubstitution[]
+  events              MatchEvent[]
+  sanctions           Sanction[]
 
   @@index([tournamentId])
   @@index([homeTeamId])
@@ -122,9 +122,9 @@ model MatchRoster {
   isStarter    Boolean @default(false)
   isSuspended  Boolean @default(false)
 
-  match  Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  team   Team   @relation(fields: [teamId], references: [id])
-  player Player @relation(fields: [playerId], references: [id])
+  match        Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  team         Team    @relation(fields: [teamId], references: [id])
+  player       Player  @relation(fields: [playerId], references: [id])
 
   @@unique([matchId, playerId])
   @@index([matchId])
@@ -142,10 +142,10 @@ model MatchSubstitution {
   windowNumber Int
   isHalftime   Boolean @default(false)
 
-  match     Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  team      Team   @relation(fields: [teamId], references: [id])
-  playerOut Player @relation("PlayerOut", fields: [playerOutId], references: [id])
-  playerIn  Player @relation("PlayerIn", fields: [playerInId], references: [id])
+  match        Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  team         Team    @relation(fields: [teamId], references: [id])
+  playerOut    Player  @relation("PlayerOut", fields: [playerOutId], references: [id])
+  playerIn     Player  @relation("PlayerIn", fields: [playerInId], references: [id])
 
   @@index([matchId])
   @@index([teamId])
@@ -158,13 +158,13 @@ model MatchEvent {
   matchId   Int
   teamId    Int
   playerId  Int
-  eventType EventType
-  minute    Int
+  type      EventType
+  minute    Int?
   createdAt DateTime  @default(now())
 
-  match  Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  team   Team   @relation(fields: [teamId], references: [id])
-  player Player @relation(fields: [playerId], references: [id])
+  match     Match     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  team      Team      @relation(fields: [teamId], references: [id])
+  player    Player    @relation(fields: [playerId], references: [id])
 
   @@index([matchId])
   @@index([teamId])
@@ -172,18 +172,18 @@ model MatchEvent {
 }
 
 model Sanction {
-  id               Int      @id @default(autoincrement())
-  playerId         Int
-  matchId          Int
-  fineAmount       Decimal  @default(0.00) @db.Decimal(10, 2)
-  isFinePaid       Boolean  @default(false)
-  matchesSuspended Int      @default(0)
-  matchesServed    Int      @default(0)
-  createdAt        DateTime @default(now())
+    id               Int      @id @default(autoincrement())
+    playerId         Int
+    matchId          Int
+    fineAmount       Decimal  @default(0.00) @db.Decimal(10, 2)
+    isFinePaid       Boolean  @default(false)
+    matchesSuspended Int      @default(0)
+    matchesServed    Int      @default(0)
+    createdAt        DateTime @default(now())
 
-  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  match  Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+    player           Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+    match            Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
 
-  @@index([playerId])
-  @@index([matchId])
+    @@index([playerId])
+    @@index([matchId])
 }
