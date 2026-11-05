@@ -1,5 +1,5 @@
-// Importa React y el hook useState para gestionar el estado local del componente.
-import React, { useState } from 'react';
+// Importa React y hooks necesarios para gestionar el estado local y efectos del componente.
+import React, { useState, useEffect } from 'react';
 
 // Importa componentes de interfaz de usuario desde la librería Material-UI (MUI).
 import {
@@ -14,20 +14,20 @@ import {
     MenuItem,
 } from '@mui/material';
 
-// Importa tipos de TypeScript definidos globalmente para DTOs de creación de partidos, equipos y torneos.
+// Importa tipos de TypeScript definidos globalmente para partidos, DTOs, equipos y torneos.
 import type { Match, CreateMatchDto, Team, Tournament } from '../../../types';
 
-// Importa la función de servicio encargada de realizar la petición HTTP para crear un partido.
-import { createMatch } from '../services/matches.service';
+// Importa las funciones de servicio encargadas de realizar las peticiones HTTP para crear y actualizar partidos.
+import { createMatch, updateMatch } from '../services/matches.service';
 
 // Define la interfaz con las propiedades (props) que recibe el componente CreateMatchDialog.
 interface CreateMatchDialogProps {
-    open: boolean;             // Controla si el diálogo está abierto o cerrado.
-    tournaments: Tournament[]; // Lista de torneos disponibles para seleccionar.
-    teams: Team[];             // Lista de todos los equipos disponibles.
-    onClose: () => void;       // Función callback para cerrar el diálogo.
-    onSuccess: () => void;
-    matchToEdit?: Match | null;   // Función callback que se ejecuta al guardar con éxito.
+    open: boolean;                 // Controla si el diálogo está abierto o cerrado.
+    tournaments: Tournament[];     // Lista de torneos disponibles para seleccionar.
+    teams: Team[];                 // Lista de todos los equipos disponibles.
+    onClose: () => void;           // Función callback para cerrar el diálogo.
+    onSuccess: () => void;         // Función callback que se ejecuta al guardar con éxito.
+    matchToEdit?: Match | null;    // Partido opcional a editar; si es null/undefined, se trata de una creación.
 }
 
 // Declaración del componente funcional CreateMatchDialog tipado con React.FC y las props anteriores.
@@ -37,8 +37,9 @@ export const CreateMatchDialog: React.FC<CreateMatchDialogProps> = ({
     teams,
     onClose,
     onSuccess,
+    matchToEdit,
 }) => {
-    // Declara el estado local 'formData' para almacenar los valores del formulario con su estructura inicial vacía.
+    // Declara el estado local 'formData' para almacenar los valores del formulario.
     const [formData, setFormData] = useState<{
         tournamentId: number | '';
         homeTeamId: number | '';
@@ -55,11 +56,40 @@ export const CreateMatchDialog: React.FC<CreateMatchDialogProps> = ({
         fieldNumber: '',
     });
 
-    // Declara un estado booleano 'loading' para indicar si hay una petición en curso (deshabilita botones).
+    // Declara un estado booleano 'loading' para indicar si hay una petición en curso.
     const [loading, setLoading] = useState<boolean>(false);
 
-    // Declara un estado 'error' para almacenar mensajes de error en caso de fallo (string o null).
+    // Declara un estado 'error' para almacenar mensajes de error en caso de fallo.
     const [error, setError] = useState<string | null>(null);
+
+    // Efecto para precargar los datos en el formulario cuando se pasa un partido a editar
+    useEffect(() => {
+        if (matchToEdit) {
+            // Formatea la fecha al formato requerido por 'datetime-local' (YYYY-MM-DDTHH:mm)
+            const formattedDate = matchToEdit.matchDate
+                ? new Date(matchToEdit.matchDate).toISOString().slice(0, 16)
+                : '';
+
+            setFormData({
+                tournamentId: matchToEdit.tournamentId ?? '',
+                homeTeamId: matchToEdit.homeTeamId ?? '',
+                awayTeamId: matchToEdit.awayTeamId ?? '',
+                matchDate: formattedDate,
+                location: matchToEdit.location ?? '',
+                fieldNumber: matchToEdit.fieldNumber ?? '',
+            });
+        } else {
+            // Si no hay partido a editar, resetea el formulario para uno nuevo
+            setFormData({
+                tournamentId: '',
+                homeTeamId: '',
+                awayTeamId: '',
+                matchDate: '',
+                location: '',
+                fieldNumber: '',
+            });
+        }
+    }, [matchToEdit, open]);
 
     // Filtra los equipos según el torneo seleccionado; si no hay torneo seleccionado, muestra todos los equipos.
     const filteredTeams = formData.tournamentId
@@ -108,15 +138,21 @@ export const CreateMatchDialog: React.FC<CreateMatchDialogProps> = ({
                 homeTeamId: Number(formData.homeTeamId),
                 awayTeamId: Number(formData.awayTeamId),
                 matchDate: new Date(formData.matchDate).toISOString(), // Convierte la fecha a formato ISO string.
-                status: 'SCHEDULED',
+                status: matchToEdit ? matchToEdit.status : 'SCHEDULED',
             };
 
-            // Llama al servicio para crear el partido en la API.
-            await createMatch(payload);
+            if (matchToEdit) {
+                // Si existe matchToEdit, actualiza el registro existente mediante PUT/PATCH
+                await updateMatch(matchToEdit.id, payload);
+            } else {
+                // Si no existe, crea un partido nuevo
+                await createMatch(payload);
+            }
+
             onSuccess();   // Ejecuta la función de éxito proporcionada por el componente padre.
             handleClose(); // Cierra y limpia el diálogo.
         } catch (err: any) {
-            console.error('Error al programar partido:', err);
+            console.error('Error al guardar partido:', err);
             const serverMsg = err?.response?.data?.message;
 
             // Maneja y formatea los distintos tipos de mensajes de error devueltos por el servidor.
@@ -125,7 +161,7 @@ export const CreateMatchDialog: React.FC<CreateMatchDialogProps> = ({
             } else if (typeof serverMsg === 'string') {
                 setError(serverMsg);
             } else {
-                setError('No se pudo programar el encuentro.');
+                setError('No se pudo guardar el encuentro.');
             }
         } finally {
             setLoading(false); // Desactiva el estado de carga sin importar si hubo éxito o error.
@@ -149,8 +185,10 @@ export const CreateMatchDialog: React.FC<CreateMatchDialogProps> = ({
     // Renderizado visual del componente utilizando componentes de Material-UI.
     return (
         <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-            {/* Título de la ventana de diálogo */}
-            <DialogTitle sx={{ fontWeight: 'bold' }}>Programar Partido</DialogTitle>
+            {/* Título dinámico dependiendo de si se está editando o creando */}
+            <DialogTitle sx={{ fontWeight: 'bold' }}>
+                {matchToEdit ? 'Editar Partido' : 'Programar Partido'}
+            </DialogTitle>
 
             {/* Contenedor de formulario que ejecuta handleSubmit al enviar */}
             <form onSubmit={handleSubmit}>
@@ -269,9 +307,9 @@ export const CreateMatchDialog: React.FC<CreateMatchDialogProps> = ({
                     <Button onClick={handleClose} color="inherit" disabled={loading}>
                         Cancelar
                     </Button>
-                    {/* Botón de envío del formulario */}
+                    {/* Botón de envío del formulario dinámico */}
                     <Button type="submit" variant="contained" color="primary" disabled={loading}>
-                        {loading ? 'Guardando...' : 'Programar Partido'}
+                        {loading ? 'Guardando...' : matchToEdit ? 'Actualizar Partido' : 'Programar Partido'}
                     </Button>
                 </DialogActions>
             </form>

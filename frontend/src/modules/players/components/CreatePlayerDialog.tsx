@@ -204,6 +204,7 @@ export const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({
                             <MenuItem value="DEFENDER">Defensa</MenuItem>
                             <MenuItem value="MIDFIELDER">Centrocampista</MenuItem>
                             <MenuItem value="FORWARD">Delantero</MenuItem>
+                            <MenuItem value="LATERAL">Lateral</MenuItem>
                         </TextField>
                     </Box>
                 </DialogContent>

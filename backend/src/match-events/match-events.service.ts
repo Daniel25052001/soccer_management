@@ -17,6 +17,13 @@ export class MatchEventsService {
   async create(createMatchEventDto: CreateMatchEventDto) {
     const { matchId, teamId, playerId, eventType, minute } = createMatchEventDto;
 
+    // Validación estricta para evitar minutos negativos o fuera de rango lógico (0 - 120)
+    if (minute === undefined || minute === null || minute < 0 || minute > 120) {
+      throw new BadRequestException(
+        'El minuto del evento debe ser un valor válido entre 0 y 120.',
+      );
+    }
+
     const match = await this.prisma.match.findUnique({ where: { id: matchId } });
     if (!match) throw new NotFoundException(`El partido con ID ${matchId} no existe.`);
 

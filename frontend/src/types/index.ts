@@ -53,7 +53,35 @@ export const PlayerPosition = {
 export type PlayerPosition = typeof PlayerPosition[keyof typeof PlayerPosition];
 
 /**
- * Representa a un jugador alineado con el esquema de Prisma en NestJS.
+ * Tipos de eventos posibles que pueden ocurrir durante un partido (goles, tarjetas, etc.).
+ */
+export const EventType = {
+    GOAL: 'GOAL',
+    OWN_GOAL: 'OWN_GOAL',
+    YELLOW_CARD: 'YELLOW_CARD',
+    RED_CARD: 'RED_CARD',
+    DOUBLE_YELLOW_RED: 'DOUBLE_YELLOW_RED',
+    ASSIST: 'ASSIST',
+} as const;
+
+export type EventType = typeof EventType[keyof typeof EventType];
+
+/**
+ * Representa un evento registrado en el acta de un partido (goles, tarjetas, etc.) asociado a un jugador.
+ */
+export interface MatchEvent {
+    id: number;
+    matchId: number;
+    teamId: number;
+    playerId: number;
+    type: EventType;
+    minute?: number | null;
+    createdAt: string;
+}
+
+/**
+ * Representa a un jugador alineado con el esquema de Prisma en NestJS,
+ * incluyendo de forma opcional su lista de eventos para estadísticas.
  */
 export interface Player {
     id: number;
@@ -65,9 +93,10 @@ export interface Player {
     position?: PlayerPosition | null;
     createdAt: string;
     team?: Team;
+    events?: MatchEvent[]; // Añadido para el conteo automático de goles y tarjetas
 }
 
-export type CreatePlayerDto = Omit<Player, 'id' | 'createdAt' | 'team'>;
+export type CreatePlayerDto = Omit<Player, 'id' | 'createdAt' | 'team' | 'events'>;
 
 /**
  * Estados del ciclo de vida de un partido.

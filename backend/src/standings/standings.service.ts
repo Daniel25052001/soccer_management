@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EventType, MatchStatus } from '@prisma/client';
 
 export interface TeamStanding {
     teamId: number;
@@ -14,16 +15,22 @@ export interface TeamStanding {
     points: number;
 }
 
+export interface TopScorer {
+    playerId: number;
+    playerName: string;
+    teamName: string;
+    goals: number;
+}
+
 @Injectable()
 export class StandingsService {
     constructor(private readonly prisma: PrismaService) { }
 
     async getStandings(tournamentId: number): Promise<TeamStanding[]> {
-        // 1. Obtener todos los partidos finalizados del torneo con sus respectivos equipos
         const finishedMatches = await this.prisma.match.findMany({
             where: {
                 tournamentId: Number(tournamentId),
-                status: 'FINISHED',
+                status: MatchStatus.FINISHED,
             },
             include: {
                 homeTeam: true,
@@ -31,10 +38,8 @@ export class StandingsService {
             },
         });
 
-        // Objeto acumulador para almacenar las estadísticas por ID de equipo
         const tableMap: { [key: number]: TeamStanding } = {};
 
-        // Función auxiliar para inicializar un equipo en la tabla si no existe
         const ensureTeamInTable = (teamId: number, teamName: string) => {
             if (!tableMap[teamId]) {
                 tableMap[teamId] = {
@@ -52,7 +57,6 @@ export class StandingsService {
             }
         };
 
-        // 2. Procesar cada partido finalizado
         for (const match of finishedMatches) {
             const homeId = match.homeTeamId;
             const awayId = match.awayTeamId;
@@ -65,18 +69,15 @@ export class StandingsService {
             const homeScore = match.homeScore ?? 0;
             const awayScore = match.awayScore ?? 0;
 
-            // Actualizar partidos jugados
             tableMap[homeId].played += 1;
             tableMap[awayId].played += 1;
 
-            // Actualizar goles
             tableMap[homeId].goalsFor += homeScore;
             tableMap[homeId].goalsAgainst += awayScore;
 
             tableMap[awayId].goalsFor += awayScore;
             tableMap[awayId].goalsAgainst += homeScore;
 
-            // Definir ganador, perdedor o empate y asignar puntos
             if (homeScore > awayScore) {
                 tableMap[homeId].won += 1;
                 tableMap[homeId].points += 3;
@@ -93,18 +94,71 @@ export class StandingsService {
             }
         }
 
-        // 3. Calcular la diferencia de goles
         Object.values(tableMap).forEach((stats) => {
             stats.goalDifference = stats.goalsFor - stats.goalsAgainst;
         });
 
-        // 4. Ordenar la tabla: Puntos -> Diferencia de Goles -> Goles a Favor
-        const standings = Object.values(tableMap).sort((a, b) => {
+        return Object.values(tableMap).sort((a, b) => {
             if (b.points !== a.points) return b.points - a.points;
             if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
             return b.goalsFor - a.goalsFor;
         });
+    }
 
-        return standings;
+    async getBestDefense(tournamentId: number): Promise<TeamStanding | null> {
+        const standings = await this.getStandings(tournamentId);
+        if (standings.length === 0) return null;
+
+        const sortedByDefense = [...standings].sort((a, b) => {
+            if (a.goalsAgainst !== b.goalsAgainst) {
+                return a.goalsAgainst - b.goalsAgainst;
+            }
+            return b.played - a.played;
+        });
+
+        return sortedByDefense[0];
+    }
+
+    async getTopScorers(tournamentId: number): Promise<TopScorer[]> {
+        const parsedTournamentId = Number(tournamentId);
+
+        const goals = await this.prisma.matchEvent.findMany({
+            where: {
+                type: EventType.GOAL,
+                match: {
+                    tournamentId: parsedTournamentId,
+                    status: MatchStatus.FINISHED,
+                },
+            },
+            include: {
+                player: true,
+                team: true,
+            },
+        });
+
+        const scorerMap: { [key: number]: { playerName: string; teamName: string; goals: number } } = {};
+
+        for (const g of goals) {
+            const playerId = g.playerId;
+            if (!playerId) continue;
+
+            const playerName = g.player
+                ? `${g.player.firstName} ${g.player.lastName}`.trim()
+                : `Jugador #${playerId}`;
+            const teamName = g.team?.name || 'Sin Equipo';
+
+            if (!scorerMap[playerId]) {
+                scorerMap[playerId] = { playerName, teamName, goals: 0 };
+            }
+            scorerMap[playerId].goals += 1;
+        }
+
+        return Object.entries(scorerMap)
+            .map(([playerId, data]) => ({
+                playerId: Number(playerId),
+                ...data,
+            }))
+            .sort((a, b) => b.goals - a.goals)
+            .slice(0, 3);
     }
 }
