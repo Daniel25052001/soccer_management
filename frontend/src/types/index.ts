@@ -41,7 +41,7 @@ export interface Team {
 export type CreateTeamDto = Omit<Team, 'id' | 'createdAt'>;
 
 /**
- * Posiciones tácticas para jugadores de fútbol 11.
+ * Posiciones tácticas para jugadores de fútbol.
  */
 export const PlayerPosition = {
     GOALKEEPER: 'GOALKEEPER',
@@ -53,7 +53,35 @@ export const PlayerPosition = {
 export type PlayerPosition = typeof PlayerPosition[keyof typeof PlayerPosition];
 
 /**
- * Representa a un jugador alineado con el esquema de Prisma en NestJS.
+ * Tipos de eventos posibles que pueden ocurrir durante un partido (goles, tarjetas, etc.).
+ */
+export const EventType = {
+    GOAL: 'GOAL',
+    OWN_GOAL: 'OWN_GOAL',
+    YELLOW_CARD: 'YELLOW_CARD',
+    RED_CARD: 'RED_CARD',
+    DOUBLE_YELLOW_RED: 'DOUBLE_YELLOW_RED',
+    ASSIST: 'ASSIST',
+} as const;
+
+export type EventType = typeof EventType[keyof typeof EventType];
+
+/**
+ * Representa un evento registrado en el acta de un partido (goles, tarjetas, etc.) asociado a un jugador.
+ */
+export interface MatchEvent {
+    id: number;
+    matchId: number;
+    teamId: number;
+    playerId: number;
+    type: EventType;
+    minute?: number | null;
+    createdAt: string;
+}
+
+/**
+ * Representa a un jugador alineado con el esquema de Prisma en NestJS,
+ * incluyendo de forma opcional su lista de eventos para estadísticas.
  */
 export interface Player {
     id: number;
@@ -65,10 +93,10 @@ export interface Player {
     position?: PlayerPosition | null;
     createdAt: string;
     team?: Team;
+    events?: MatchEvent[]; // Añadido para el conteo automático de goles y tarjetas
 }
 
-export type CreatePlayerDto = Omit<Player, 'id' | 'createdAt' | 'team'>;
-
+export type CreatePlayerDto = Omit<Player, 'id' | 'createdAt' | 'team' | 'events'>;
 
 /**
  * Estados del ciclo de vida de un partido.
@@ -91,11 +119,17 @@ export interface Match {
     tournamentId: number;
     homeTeamId: number;
     awayTeamId: number;
-    matchDate?: string | null;
+    matchDate: string;
     location?: string | null;
     fieldNumber?: string | null;
-    homeScore?: number | null;
-    awayScore?: number | null;
+    homeScore: number;
+    awayScore: number;
+    homeSubsUsed?: number;
+    homeWindowsUsed?: number;
+    awaySubsUsed?: number;
+    awayWindowsUsed?: number;
+    homeArbitragePaid?: boolean;
+    awayArbitragePaid?: boolean;
     status: MatchStatus;
     createdAt: string;
     // Relaciones pobladas desde la API
@@ -107,14 +141,22 @@ export interface Match {
 /**
  * DTO para la programación de un nuevo partido.
  */
-export type CreateMatchDto = Omit<
-    Match,
-    'id' | 'createdAt' | 'tournament' | 'homeTeam' | 'awayTeam' | 'homeScore' | 'awayScore'
->;
+export interface CreateMatchDto {
+    tournamentId: number;
+    homeTeamId: number;
+    awayTeamId: number;
+    matchDate: string;
+    location?: string | null;
+    fieldNumber?: string | null;
+    status?: MatchStatus;
+    homeArbitragePaid?: boolean;
+    awayArbitragePaid?: boolean;
+}
 
 /**
- * DTO para la actualización de marcador o estado de un partido.
+ * DTO para la actualización de marcador, estado o estadísticas de un partido.
  */
+<<<<<<< HEAD
 export type UpdateMatchDto = Partial<CreateMatchDto> & {
     homeScore?: number | null;
     awayScore?: number | null;
@@ -125,3 +167,13 @@ export type UpdateMatchDto = Partial<CreateMatchDto> & {
  * DTO para la actualización de datos de un jugador.
  */
 export type UpdatePlayerDto = Partial<CreatePlayerDto>;
+=======
+export interface UpdateMatchDto extends Partial<CreateMatchDto> {
+    homeScore?: number;
+    awayScore?: number;
+    homeSubsUsed?: number;
+    homeWindowsUsed?: number;
+    awaySubsUsed?: number;
+    awayWindowsUsed?: number;
+}
+>>>>>>> feature/standings-table

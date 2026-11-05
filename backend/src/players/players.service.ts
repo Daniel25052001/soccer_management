@@ -41,18 +41,20 @@ export class PlayersService {
       },
       include: {
         team: true,
+        events: true, // Incluimos eventos en la creación
       },
     });
   }
 
   /**
-   * Obtiene todos los jugadores registrados con su equipo asociado.
+   * Obtiene todos los jugadores registrados con su equipo asociado y sus eventos (goles/tarjetas).
    */
   async findAll() {
     return this.prisma.player.findMany({
       orderBy: { lastName: 'asc' },
       include: {
         team: true,
+        events: true, // Se añaden los eventos para que el frontend pueda calcular estadísticas
       },
     });
   }
@@ -67,6 +69,9 @@ export class PlayersService {
     return this.prisma.player.findMany({
       where: { teamId: numericTeamId },
       orderBy: { defaultDorsal: 'asc' },
+      include: {
+        events: true, // Útil también si se requiere en consultas por equipo
+      },
     });
   }
 
@@ -203,4 +208,19 @@ export class PlayersService {
       );
     }
   }
+
+  async createMany(teamId: number, players: { firstName: string; lastName: string; documentId: string; defaultDorsal?: number; position?: string }[]) {
+    const data = players.map(p => ({
+      ...p,
+      teamId: Number(teamId),
+      defaultDorsal: p.defaultDorsal ? Number(p.defaultDorsal) : null,
+    }));
+
+    return this.prisma.player.createMany({
+      data,
+      skipDuplicates: true, // Evita errores si una cédula ya existe
+    });
+  }
+
+
 }

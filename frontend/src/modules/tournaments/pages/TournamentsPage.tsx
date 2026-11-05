@@ -15,15 +15,21 @@ import {
     Alert,
     IconButton,
     Tooltip,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import LeaderboardIcon from '@mui/icons-material/Leaderboard'; // Icono para la tabla de posiciones
 import type { Tournament } from '../../../types';
 import { deleteTournament, getTournaments } from '../services/tournaments.service';
 import { CreateTournamentDialog } from '../components/CreateTournamentDialog';
 import { EditTournamentDialog } from '../components/EditTournamentDialog';
 import { ConfirmDeleteDialog } from '../../../components/ConfirmDeleteDialog';
+import { StandingsTable } from '../../standings/pages/StandingsTable'; // Importa el componente que creamos
 
 export const TournamentsPage: React.FC = () => {
     const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -36,6 +42,10 @@ export const TournamentsPage: React.FC = () => {
     const [openEditModal, setOpenEditModal] = useState<boolean>(false);
     const [openDeleteDialog, setOpenDeleteDialog] = useState<boolean>(false);
     const [deleting, setDeleting] = useState<boolean>(false);
+
+    // Estado para el modal de la Tabla de Posiciones
+    const [openStandingsModal, setOpenStandingsModal] = useState<boolean>(false);
+    const [tournamentForStandings, setTournamentForStandings] = useState<Tournament | null>(null);
 
     const fetchTournaments = useCallback(async () => {
         try {
@@ -63,6 +73,12 @@ export const TournamentsPage: React.FC = () => {
     const handleOpenDelete = (tournament: Tournament) => {
         setSelectedTournament(tournament);
         setOpenDeleteDialog(true);
+    };
+
+    // Abre el modal de posiciones para un torneo específico
+    const handleOpenStandings = (tournament: Tournament) => {
+        setTournamentForStandings(tournament);
+        setOpenStandingsModal(true);
     };
 
     const ConfirmDelete = async () => {
@@ -142,6 +158,12 @@ export const TournamentsPage: React.FC = () => {
                                             />
                                         </TableCell>
                                         <TableCell align="center">
+                                            {/* Botón para ver la Tabla de Posiciones */}
+                                            <Tooltip title="Ver Tabla de Posiciones">
+                                                <IconButton color="info" onClick={() => handleOpenStandings(t)}>
+                                                    <LeaderboardIcon />
+                                                </IconButton>
+                                            </Tooltip>
                                             <Tooltip title="Editar">
                                                 <IconButton color="primary" onClick={() => handleOpenEdit(t)}>
                                                     <EditIcon />
@@ -160,6 +182,28 @@ export const TournamentsPage: React.FC = () => {
                     </Table>
                 </TableContainer>
             )}
+
+            {/* Modal para ver la Tabla de Posiciones del Torneo */}
+            <Dialog
+                open={openStandingsModal}
+                onClose={() => setOpenStandingsModal(false)}
+                maxWidth="md"
+                fullWidth
+            >
+                <DialogTitle sx={{ fontWeight: 'bold' }}>
+                    Tabla de Posiciones: {tournamentForStandings?.name}
+                </DialogTitle>
+                <DialogContent dividers>
+                    {tournamentForStandings && (
+                        <StandingsTable tournamentId={tournamentForStandings.id} />
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOpenStandingsModal(false)} color="primary" variant="contained">
+                        Cerrar
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             <CreateTournamentDialog
                 open={openCreateModal}

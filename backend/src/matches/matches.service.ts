@@ -129,9 +129,19 @@ export class MatchesService {
   async remove(id: number) {
     await this.findOne(id);
 
-    return this.prisma.match.delete({
-      where: { id },
-    });
+    try {
+      return await this.prisma.match.delete({
+        where: { id },
+      });
+    } catch (error: any) {
+      // Capturamos el error de violación de llave foránea de Prisma (P2003)
+      if (error.code === 'P2003') {
+        throw new BadRequestException(
+          'No se puede eliminar el partido porque ya cuenta con sanciones, goles o registros asociados.',
+        );
+      }
+      throw error;
+    }
   }
 
   /**

@@ -8,6 +8,9 @@ import {
     TableContainer,
     TableHead,
     TableRow,
+    TablePagination,
+    TextField,
+    MenuItem,
     Paper,
     Box,
     CircularProgress,
@@ -37,6 +40,12 @@ export const TeamsPage: React.FC = () => {
     const [openEditModal, setOpenEditModal] = useState<boolean>(false);
     const [openDeleteDialog, setOpenDeleteDialog] = useState<boolean>(false);
     const [deleting, setDeleting] = useState<boolean>(false);
+
+    // Estados para Filtros y Paginación
+    const [searchTeamName, setSearchTeamName] = useState<string>('');
+    const [searchTournamentId, setSearchTournamentId] = useState<string>('');
+    const [page, setPage] = useState<number>(0);
+    const [rowsPerPage, setRowsPerPage] = useState<number>(10);
 
     const fetchData = useCallback(async () => {
         try {
@@ -106,6 +115,28 @@ export const TeamsPage: React.FC = () => {
         }
     };
 
+    // Lógica de Filtrado por Nombre de Equipo y por Torneo
+    const filteredTeams = teams.filter((team) => {
+        const matchesName = team.name.toLowerCase().includes(searchTeamName.toLowerCase());
+        const matchesTournament = searchTournamentId === '' || team.tournamentId === Number(searchTournamentId);
+        return matchesName && matchesTournament;
+    });
+
+    // Lógica de Paginación aplicada sobre los equipos filtrados
+    const paginatedTeams = filteredTeams.slice(
+        page * rowsPerPage,
+        page * rowsPerPage + rowsPerPage
+    );
+
+    const handleChangePage = (_event: unknown, newPage: number) => {
+        setPage(newPage);
+    };
+
+    const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0); // Reinicia a la primera página al cambiar la cantidad de filas
+    };
+
     return (
         <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -122,6 +153,40 @@ export const TeamsPage: React.FC = () => {
                 </Button>
             </Box>
 
+            {/* Barra de Filtros por Nombre de Equipo y Torneo */}
+            <Paper elevation={2} sx={{ p: 2, mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <TextField
+                    label="Filtrar por nombre de equipo"
+                    variant="outlined"
+                    size="small"
+                    value={searchTeamName}
+                    onChange={(e) => {
+                        setSearchTeamName(e.target.value);
+                        setPage(0);
+                    }}
+                    sx={{ flexGrow: 1, minWidth: '220px' }}
+                />
+                <TextField
+                    select
+                    label="Filtrar por torneo"
+                    variant="outlined"
+                    size="small"
+                    value={searchTournamentId}
+                    onChange={(e) => {
+                        setSearchTournamentId(e.target.value);
+                        setPage(0);
+                    }}
+                    sx={{ flexGrow: 1, minWidth: '220px' }}
+                >
+                    <MenuItem value="">Todos los torneos</MenuItem>
+                    {tournaments.map((t) => (
+                        <MenuItem key={t.id} value={t.id}>
+                            {t.name}
+                        </MenuItem>
+                    ))}
+                </TextField>
+            </Paper>
+
             {errorMessage && (
                 <Alert severity="error" sx={{ mb: 3 }} onClose={() => setErrorMessage(null)}>
                     {errorMessage}
@@ -133,51 +198,66 @@ export const TeamsPage: React.FC = () => {
                     <CircularProgress />
                 </Box>
             ) : (
-                <TableContainer component={Paper} elevation={3}>
-                    <Table>
-                        <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
-                            <TableRow>
-                                <TableCell><b>ID</b></TableCell>
-                                <TableCell><b>Nombre del Equipo</b></TableCell>
-                                <TableCell><b>Torneo</b></TableCell>
-                                <TableCell><b>Delegado</b></TableCell>
-                                <TableCell><b>Teléfono</b></TableCell>
-                                <TableCell align="center"><b>Acciones</b></TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {teams.length === 0 ? (
+                <Paper elevation={3}>
+                    <TableContainer>
+                        <Table>
+                            <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                                 <TableRow>
-                                    <TableCell colSpan={6} align="center">
-                                        No hay equipos registrados en la base de datos.
-                                    </TableCell>
+                                    <TableCell><b>ID</b></TableCell>
+                                    <TableCell><b>Nombre del Equipo</b></TableCell>
+                                    <TableCell><b>Torneo</b></TableCell>
+                                    <TableCell><b>Delegado</b></TableCell>
+                                    <TableCell><b>Teléfono</b></TableCell>
+                                    <TableCell align="center"><b>Acciones</b></TableCell>
                                 </TableRow>
-                            ) : (
-                                teams.map((team) => (
-                                    <TableRow key={team.id} hover>
-                                        <TableCell>{team.id}</TableCell>
-                                        <TableCell>{team.name}</TableCell>
-                                        <TableCell>{getTournamentName(team.tournamentId)}</TableCell>
-                                        <TableCell>{team.delegateName || '-'}</TableCell>
-                                        <TableCell>{team.delegatePhone || '-'}</TableCell>
-                                        <TableCell align="center">
-                                            <Tooltip title="Editar">
-                                                <IconButton color="primary" onClick={() => handleOpenEdit(team)}>
-                                                    <EditIcon />
-                                                </IconButton>
-                                            </Tooltip>
-                                            <Tooltip title="Eliminar">
-                                                <IconButton color="error" onClick={() => handleOpenDelete(team)}>
-                                                    <DeleteIcon />
-                                                </IconButton>
-                                            </Tooltip>
+                            </TableHead>
+                            <TableBody>
+                                {paginatedTeams.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} align="center">
+                                            No se encontraron equipos registrados con los filtros aplicados.
                                         </TableCell>
                                     </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
+                                ) : (
+                                    paginatedTeams.map((team) => (
+                                        <TableRow key={team.id} hover>
+                                            <TableCell>{team.id}</TableCell>
+                                            <TableCell>{team.name}</TableCell>
+                                            <TableCell>{getTournamentName(team.tournamentId)}</TableCell>
+                                            <TableCell>{team.delegateName || '-'}</TableCell>
+                                            <TableCell>{team.delegatePhone || '-'}</TableCell>
+                                            <TableCell align="center">
+                                                <Tooltip title="Editar">
+                                                    <IconButton color="primary" onClick={() => handleOpenEdit(team)}>
+                                                        <EditIcon />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                <Tooltip title="Eliminar">
+                                                    <IconButton color="error" onClick={() => handleOpenDelete(team)}>
+                                                        <DeleteIcon />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+
+                    {/* Componente de Paginación */}
+                    <TablePagination
+                        component="div"
+                        count={filteredTeams.length}
+                        page={page}
+                        onPageChange={handleChangePage}
+                        rowsPerPage={rowsPerPage}
+                        onRowsPerPageChange={handleChangeRowsPerPage}
+                        rowsPerPageOptions={[5, 10, 25]}
+                        labelRowsPerPage="Filas por página:"
+                        labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count !== -1 ? count : `más de ${to}`}`}
+                    />
+                </Paper>
             )}
 
             <CreateTeamDialog
