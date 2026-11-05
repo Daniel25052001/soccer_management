@@ -31,4 +31,10 @@ export class PlayersController {
   remove(@Param('id') id: string) {
     return this.playersService.remove(+id);
   }
+
+  @Post('bulk')
+  async createMany(@Body() body: { teamId: number; players: any[] }) {
+    return this.playersService.createMany(body.teamId, body.players);
+  }
+
 }

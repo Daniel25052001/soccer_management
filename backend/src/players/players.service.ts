@@ -2,10 +2,13 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePlayerDto } from './dto/create-player.dto';
 import { UpdatePlayerDto } from './dto/update-player.dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class PlayersService {
@@ -15,25 +18,43 @@ export class PlayersService {
    * Registra un nuevo jugador validando la existencia del equipo y la unicidad del documento.
    */
   async create(createPlayerDto: CreatePlayerDto) {
-    await this.verifyTeamExists(createPlayerDto.teamId);
-    await this.verifyDocumentIsUnique(createPlayerDto.documentId);
+    if (createPlayerDto.teamId) {
+      await this.verifyTeamExists(Number(createPlayerDto.teamId));
+    }
+    if (createPlayerDto.documentId) {
+      await this.verifyDocumentIsUnique(createPlayerDto.documentId);
+    }
 
     return this.prisma.player.create({
-      data: createPlayerDto,
+      data: {
+        teamId: Number(createPlayerDto.teamId),
+        firstName: createPlayerDto.firstName,
+        lastName: createPlayerDto.lastName,
+        documentId: createPlayerDto.documentId,
+        defaultDorsal:
+          createPlayerDto.defaultDorsal !== undefined &&
+            createPlayerDto.defaultDorsal !== null &&
+            String(createPlayerDto.defaultDorsal) !== ''
+            ? Number(createPlayerDto.defaultDorsal)
+            : null,
+        position: createPlayerDto.position || null,
+      },
       include: {
         team: true,
+        events: true, // Incluimos eventos en la creación
       },
     });
   }
 
   /**
-   * Obtiene todos los jugadores registrados con su equipo asociado.
+   * Obtiene todos los jugadores registrados con su equipo asociado y sus eventos (goles/tarjetas).
    */
   async findAll() {
     return this.prisma.player.findMany({
       orderBy: { lastName: 'asc' },
       include: {
         team: true,
+        events: true, // Se añaden los eventos para que el frontend pueda calcular estadísticas
       },
     });
   }
@@ -42,11 +63,15 @@ export class PlayersService {
    * Obtiene la nómina de todos los jugadores pertenecientes a un equipo específico.
    */
   async findByTeam(teamId: number) {
-    await this.verifyTeamExists(teamId);
+    const numericTeamId = Number(teamId);
+    await this.verifyTeamExists(numericTeamId);
 
     return this.prisma.player.findMany({
-      where: { teamId },
+      where: { teamId: numericTeamId },
       orderBy: { defaultDorsal: 'asc' },
+      include: {
+        events: true, // Útil también si se requiere en consultas por equipo
+      },
     });
   }
 
@@ -54,16 +79,18 @@ export class PlayersService {
    * Obtiene el detalle de un jugador por su ID numérico.
    */
   async findOne(id: number) {
+    const numericId = Number(id);
+    if (isNaN(numericId)) {
+      throw new BadRequestException('El ID del jugador debe ser un número válido.');
+    }
+
     const player = await this.prisma.player.findUnique({
-      where: { id },
-      include: {
-        team: true,
-        sanctions: true,
-      },
+      where: { id: numericId },
+      include: { team: true },
     });
 
     if (!player) {
-      throw new NotFoundException(`El jugador con ID ${id} no existe.`);
+      throw new NotFoundException(`Jugador con ID ${numericId} no encontrado.`);
     }
 
     return player;
@@ -73,14 +100,16 @@ export class PlayersService {
    * Actualiza los datos de un jugador o lo transfiere de equipo.
    */
   async update(id: number, updatePlayerDto: UpdatePlayerDto) {
-    const currentPlayer = await this.findOne(id);
+    const numericId = Number(id);
+    const currentPlayer = await this.findOne(numericId);
 
-    // Si se modifica el equipo, verificar que el nuevo equipo exista
-    if (updatePlayerDto.teamId && updatePlayerDto.teamId !== currentPlayer.teamId) {
-      await this.verifyTeamExists(updatePlayerDto.teamId);
+    if (
+      updatePlayerDto.teamId &&
+      Number(updatePlayerDto.teamId) !== currentPlayer.teamId
+    ) {
+      await this.verifyTeamExists(Number(updatePlayerDto.teamId));
     }
 
-    // Si se modifica el documento, verificar que el nuevo documento no pertenezca a otro jugador
     if (
       updatePlayerDto.documentId &&
       updatePlayerDto.documentId !== currentPlayer.documentId
@@ -88,24 +117,66 @@ export class PlayersService {
       await this.verifyDocumentIsUnique(updatePlayerDto.documentId);
     }
 
-    return this.prisma.player.update({
-      where: { id },
-      data: updatePlayerDto,
-      include: {
-        team: true,
-      },
-    });
+    const dataToUpdate: Prisma.PlayerUpdateInput = {};
+
+    if (updatePlayerDto.teamId !== undefined) {
+      dataToUpdate.team = { connect: { id: Number(updatePlayerDto.teamId) } };
+    }
+    if (updatePlayerDto.firstName !== undefined) {
+      dataToUpdate.firstName = updatePlayerDto.firstName;
+    }
+    if (updatePlayerDto.lastName !== undefined) {
+      dataToUpdate.lastName = updatePlayerDto.lastName;
+    }
+    if (updatePlayerDto.documentId !== undefined) {
+      dataToUpdate.documentId = updatePlayerDto.documentId;
+    }
+    if (updatePlayerDto.defaultDorsal !== undefined) {
+      dataToUpdate.defaultDorsal =
+        updatePlayerDto.defaultDorsal !== null &&
+          updatePlayerDto.defaultDorsal !== undefined &&
+          String(updatePlayerDto.defaultDorsal) !== ''
+          ? Number(updatePlayerDto.defaultDorsal)
+          : null;
+    }
+    if (updatePlayerDto.position !== undefined) {
+      dataToUpdate.position = updatePlayerDto.position || null;
+    }
+
+    try {
+      return await this.prisma.player.update({
+        where: { id: numericId },
+        data: dataToUpdate,
+        include: {
+          team: true,
+        },
+      });
+    } catch (error) {
+      console.error('Error en PlayersService.update:', error);
+      throw new InternalServerErrorException('Error al actualizar la información del jugador.');
+    }
   }
 
   /**
    * Elimina un jugador por su ID.
    */
   async remove(id: number) {
-    await this.findOne(id);
+    const numericId = Number(id);
+    await this.findOne(numericId);
 
-    return this.prisma.player.delete({
-      where: { id },
-    });
+    try {
+      return await this.prisma.player.delete({
+        where: { id: numericId },
+      });
+    } catch (error: any) {
+      console.error('Error en PlayersService.remove:', error);
+      if (error?.code === 'P2003') {
+        throw new BadRequestException(
+          'No se puede eliminar el jugador porque está asociado a partidos o alineaciones.'
+        );
+      }
+      throw new InternalServerErrorException('No se pudo eliminar el jugador seleccionado.');
+    }
   }
 
   /**
@@ -113,7 +184,7 @@ export class PlayersService {
    */
   private async verifyTeamExists(teamId: number): Promise<void> {
     const team = await this.prisma.team.findUnique({
-      where: { id: teamId },
+      where: { id: Number(teamId) },
     });
 
     if (!team) {
@@ -125,6 +196,8 @@ export class PlayersService {
    * Auxiliar: Valida que el documento de identidad no esté registrado.
    */
   private async verifyDocumentIsUnique(documentId: string): Promise<void> {
+    if (!documentId) return;
+
     const existingPlayer = await this.prisma.player.findUnique({
       where: { documentId },
     });
@@ -135,4 +208,19 @@ export class PlayersService {
       );
     }
   }
+
+  async createMany(teamId: number, players: { firstName: string; lastName: string; documentId: string; defaultDorsal?: number; position?: string }[]) {
+    const data = players.map(p => ({
+      ...p,
+      teamId: Number(teamId),
+      defaultDorsal: p.defaultDorsal ? Number(p.defaultDorsal) : null,
+    }));
+
+    return this.prisma.player.createMany({
+      data,
+      skipDuplicates: true, // Evita errores si una cédula ya existe
+    });
+  }
+
+
 }

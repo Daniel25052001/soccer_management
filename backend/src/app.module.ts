@@ -9,10 +9,21 @@ import { MatchesModule } from './matches/matches.module';
 import { MatchRostersModule } from './match-rosters/match-rosters.module';
 import { MatchEventsModule } from './match-events/match-events.module';
 import { SanctionsModule } from './sanctions/sanctions.module';
+import { StandingsModule } from './standings/standings.module';
+import { TournamentStandingsModule } from './tournament-standings/tournament-standings.module';
 
 @Module({
-  imports: [PrismaModule, TournamentsModule, TeamsModule, PlayersModule, MatchesModule, MatchRostersModule, MatchEventsModule, SanctionsModule],
+  imports: [PrismaModule,
+    TournamentsModule,
+    TeamsModule,
+    PlayersModule,
+    MatchesModule,
+    MatchRostersModule,
+    MatchEventsModule,
+    SanctionsModule,
+    StandingsModule,
+    TournamentStandingsModule],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
