@@ -19,6 +19,7 @@ import {
     Chip,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import GroupAddIcon from '@mui/icons-material/GroupAdd'; // <-- Icono para carga masiva
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SportsSoccerIcon from '@mui/icons-material/SportsSoccer';
@@ -29,6 +30,7 @@ import { getTeams } from '../../teams/services/teams.service';
 import { CreatePlayerDialog } from '../components/CreatePlayerDialog';
 import { EditPlayerDialog } from '../components/EditPlayerDialog';
 import { ConfirmDeleteDialog } from '../../../components/ConfirmDeleteDialog';
+import { CreateBulkPlayersDialog } from '../components/CreateBulkPlayersDialog'; // <-- Importamos el componente masivo
 
 export const PlayersPage: React.FC = () => {
     const [players, setPlayers] = useState<Player[]>([]);
@@ -38,6 +40,7 @@ export const PlayersPage: React.FC = () => {
 
     // Modales
     const [openCreateModal, setOpenCreateModal] = useState<boolean>(false);
+    const [openBulkModal, setOpenBulkModal] = useState<boolean>(false); // <-- Estado para el modal masivo
     const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
     const [openEditModal, setOpenEditModal] = useState<boolean>(false);
     const [openDeleteDialog, setOpenDeleteDialog] = useState<boolean>(false);
@@ -120,6 +123,7 @@ export const PlayersPage: React.FC = () => {
         switch (pos) {
             case 'GOALKEEPER': return 'Portero';
             case 'DEFENDER': return 'Defensa';
+            case 'FULLBACK': return 'Lateral';
             case 'MIDFIELDER': return 'Centrocampista';
             case 'FORWARD': return 'Delantero';
             default: return '-';
@@ -154,18 +158,29 @@ export const PlayersPage: React.FC = () => {
 
     return (
         <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
                 <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
                     Gestión de Jugadores
                 </Typography>
-                <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<AddIcon />}
-                    onClick={() => setOpenCreateModal(true)}
-                >
-                    Nuevo Jugador
-                </Button>
+                <Box sx={{ display: 'flex', gap: 1.5 }}>
+                    {/* Botón de Carga Masiva */}
+                    <Button
+                        variant="outlined"
+                        color="primary"
+                        startIcon={<GroupAddIcon />}
+                        onClick={() => setOpenBulkModal(true)}
+                    >
+                        Carga Masiva
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        startIcon={<AddIcon />}
+                        onClick={() => setOpenCreateModal(true)}
+                    >
+                        Nuevo Jugador
+                    </Button>
+                </Box>
             </Box>
 
             {/* Barra de Filtros por Nombre y Equipo */}
@@ -270,7 +285,6 @@ export const PlayersPage: React.FC = () => {
                                                         <IconButton
                                                             color="info"
                                                             onClick={() => {
-                                                                // Puedes abrir un modal de eventos o mostrar detalles aquí si lo deseas
                                                                 console.log("Eventos de:", p.firstName, p.events);
                                                             }}
                                                         >
@@ -317,6 +331,16 @@ export const PlayersPage: React.FC = () => {
                 onClose={() => setOpenCreateModal(false)}
                 onSuccess={fetchData}
             />
+
+            {/* Diálogo para Carga Masiva (requiere seleccionar un equipo dentro del diálogo o pasarle uno por defecto) */}
+            {teams.length > 0 && (
+                <CreateBulkPlayersDialog
+                    open={openBulkModal}
+                    teams={teams} // Asegúrate de que tu CreateBulkPlayersDialog acepte la lista de equipos para elegir a cuál cargar
+                    onClose={() => setOpenBulkModal(false)}
+                    onSuccess={fetchData}
+                />
+            )}
 
             <EditPlayerDialog
                 open={openEditModal}

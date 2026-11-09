@@ -1,6 +1,14 @@
 import { apiClient } from '../../../api/apiClient';
 import type { CreatePlayerDto, Player } from '../../../types';
 
+export interface BulkPlayerDto {
+    firstName: string;
+    lastName: string;
+    documentId: string;
+    defaultDorsal?: number;
+    position?: string;
+}
+
 /**
  * Obtiene la lista completa de jugadores desde la API REST.
  */
@@ -14,6 +22,17 @@ export const getPlayers = async (): Promise<Player[]> => {
  */
 export const createPlayer = async (data: CreatePlayerDto): Promise<Player> => {
     const response = await apiClient.post<Player>('/players', data);
+    return response.data;
+};
+
+/**
+ * Registra varios jugadores en bloque para un equipo específico.
+ */
+export const createBulkPlayers = async (teamId: number, players: BulkPlayerDto[]): Promise<any> => {
+    const response = await apiClient.post('/players/bulk', {
+        teamId: Number(teamId),
+        players,
+    });
     return response.data;
 };
 

@@ -34,6 +34,7 @@ enum EventType {
 enum PlayerPosition {
   GOALKEEPER
   DEFENDER
+  FULLBACK     // <-- Incluido correctamente
   MIDFIELDER
   FORWARD
 }
@@ -49,7 +50,7 @@ model Tournament {
 
   teams     Team[]
   matches   Match[]
-  standings Standing[]        // Relación inversa añadida
+  standings Standing[]
 }
 
 model Team {
@@ -67,7 +68,7 @@ model Team {
   rosters       MatchRoster[]
   substitutions MatchSubstitution[]
   events        MatchEvent[]
-  standings     Standing[]          // Relación inversa añadida
+  standings     Standing[]
 
   @@index([tournamentId])
 }
@@ -93,21 +94,21 @@ model Player {
 }
 
 model Match {
-  id                  Int         @id @default(autoincrement())
-  tournamentId        Int
-  homeTeamId          Int
-  awayTeamId          Int
-  matchDate           DateTime
-  status              MatchStatus @default(SCHEDULED)
-  homeScore           Int         @default(0)
-  awayScore           Int         @default(0)
-  homeSubsUsed        Int         @default(0)
-  homeWindowsUsed     Int         @default(0)
-  awaySubsUsed        Int         @default(0)
-  awayWindowsUsed     Int         @default(0)
-  homeArbitragePaid   Boolean     @default(false)
-  awayArbitragePaid   Boolean     @default(false)
-  createdAt           DateTime    @default(now())
+  id                Int         @id @default(autoincrement())
+  tournamentId      Int
+  homeTeamId        Int
+  awayTeamId        Int
+  matchDate         DateTime
+  status            MatchStatus @default(SCHEDULED)
+  homeScore         Int         @default(0)
+  awayScore         Int         @default(0)
+  homeSubsUsed      Int         @default(0)
+  homeWindowsUsed   Int         @default(0)
+  awaySubsUsed      Int         @default(0)
+  awayWindowsUsed   Int         @default(0)
+  homeArbitragePaid Boolean     @default(false)
+  awayArbitragePaid Boolean     @default(false)
+  createdAt         DateTime    @default(now())
 
   tournament    Tournament          @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   homeTeam      Team                @relation("HomeTeam", fields: [homeTeamId], references: [id])
@@ -131,9 +132,9 @@ model MatchRoster {
   isStarter    Boolean @default(false)
   isSuspended  Boolean @default(false)
 
-  match   Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  team    Team    @relation(fields: [teamId], references: [id])
-  player  Player  @relation(fields: [playerId], references: [id])
+  match  Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  team   Team   @relation(fields: [teamId], references: [id])
+  player Player @relation(fields: [playerId], references: [id])
 
   @@unique([matchId, playerId])
   @@index([matchId])
@@ -151,10 +152,10 @@ model MatchSubstitution {
   windowNumber Int
   isHalftime   Boolean @default(false)
 
-  match     Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  team      Team    @relation(fields: [teamId], references: [id])
-  playerOut Player  @relation("PlayerOut", fields: [playerOutId], references: [id])
-  playerIn  Player  @relation("PlayerIn", fields: [playerInId], references: [id])
+  match     Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  team      Team   @relation(fields: [teamId], references: [id])
+  playerOut Player @relation("PlayerOut", fields: [playerOutId], references: [id])
+  playerIn  Player @relation("PlayerIn", fields: [playerInId], references: [id])
 
   @@index([matchId])
   @@index([teamId])
@@ -171,9 +172,9 @@ model MatchEvent {
   minute    Int?
   createdAt DateTime  @default(now())
 
-  match   Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  team    Team    @relation(fields: [teamId], references: [id])
-  player  Player  @relation(fields: [playerId], references: [id])
+  match  Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  team   Team   @relation(fields: [teamId], references: [id])
+  player Player @relation(fields: [playerId], references: [id])
 
   @@index([matchId])
   @@index([teamId])
@@ -181,20 +182,20 @@ model MatchEvent {
 }
 
 model Sanction {
-    id                 Int      @id @default(autoincrement())
-    playerId           Int
-    matchId            Int
-    fineAmount         Decimal  @default(0.00) @db.Decimal(10, 2)
-    isFinePaid         Boolean  @default(false)
-    matchesSuspended   Int      @default(0)
-    matchesServed      Int      @default(0)
-    createdAt          DateTime @default(now())
+  id               Int      @id @default(autoincrement())
+  playerId         Int
+  matchId          Int
+  fineAmount       Decimal  @default(0.00) @db.Decimal(10, 2)
+  isFinePaid       Boolean  @default(false)
+  matchesSuspended Int      @default(0)
+  matchesServed    Int      @default(0)
+  createdAt        DateTime @default(now())
 
-    player             Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
-    match              Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  match  Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
 
-    @@index([playerId])
-    @@index([matchId])
+  @@index([playerId])
+  @@index([matchId])
 }
 
 model Standing {
@@ -209,11 +210,11 @@ model Standing {
   goalsAgainst   Int      @default(0)
   goalDifference Int      @default(0)
   points         Int      @default(0)
-  
-  tournament     Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  team           Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  team       Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@unique([tournamentId, teamId])
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
 }
