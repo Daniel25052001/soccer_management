@@ -50,12 +50,46 @@ export class PlayersService {
    * Obtiene todos los jugadores registrados con su equipo asociado y sus eventos (goles/tarjetas).
    */
   async findAll() {
-    return this.prisma.player.findMany({
+    const players = await this.prisma.player.findMany({
       orderBy: { lastName: 'asc' },
       include: {
         team: true,
-        events: true, // Se añaden los eventos para que el frontend pueda calcular estadísticas
+        events: true,
+        sanctions: true,
       },
+    });
+
+    return players.map((player) => {
+      // 1. Contamos amarillas y rojas de los eventos
+      const yellowCards = player.events.filter((e) => e.type === 'YELLOW_CARD').length;
+      const redCards = player.events.filter((e) => e.type === 'RED_CARD').length;
+
+      // 2. Verificamos sanciones de forma segura por si el campo status varía
+      const hasActiveSanction = player.sanctions?.some(
+        (s: any) => s.status === 'PENDING' || s.status === 'ACTIVE',
+      ) || false;
+
+      // 3. Regla de habilitación
+      const isPaid = player.isPaid;
+      const canPlay = isPaid && !hasActiveSanction && redCards === 0 && yellowCards < 3;
+
+      // 4. Motivo de suspensión
+      let suspensionReason: string | null = null;
+      if (!isPaid) {
+        suspensionReason = 'Pago de inscripción pendiente';
+      } else if (hasActiveSanction || redCards > 0) {
+        suspensionReason = 'Suspendido (Tarjeta Roja / Sanción activa)';
+      } else if (yellowCards >= 3) {
+        suspensionReason = 'Acumulación de amarillas (3 o más)';
+      }
+
+      return {
+        ...player,
+        yellowCards,
+        redCards,
+        canPlay,
+        suspensionReason,
+      };
     });
   }
 
@@ -222,4 +256,21 @@ export class PlayersService {
       skipDuplicates: true, // Evita errores si una cédula ya existe
     });
   }
+
+  async togglePaymentStatus(id: number, isPaid: boolean) {
+    return this.prisma.player.update({
+      where: { id },
+      data: { isPaid },
+      include: {
+        team: true,
+        events: true,
+        sanctions: true,
+      },
+    });
+  }
+
+
+
+
+
 }

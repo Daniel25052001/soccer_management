@@ -53,3 +53,11 @@ export const updatePlayer = async (
 export const deletePlayer = async (id: number): Promise<void> => {
     await apiClient.delete(`/players/${id}`);
 };
+
+/**
+ * Cambia el estado de pago de inscripción de un jugador.
+ */
+export const togglePlayerPayment = async (id: number, isPaid: boolean): Promise<Player> => {
+    const response = await apiClient.patch<Player>(`/players/${id}/toggle-payment`, { isPaid });
+    return response.data;
+};

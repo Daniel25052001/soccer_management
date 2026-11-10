@@ -6,6 +6,7 @@ import {
     Min,
     Max,
     IsEnum,
+    IsBoolean
 } from 'class-validator';
 import { PlayerPosition } from '@prisma/client';
 
@@ -35,4 +36,8 @@ export class CreatePlayerDto {
     @IsEnum(PlayerPosition, { message: 'La posición ingresada no es válida.' })
     @IsOptional()
     position?: PlayerPosition;
+
+    @IsBoolean()
+    @IsOptional()
+    isPaid?: boolean;
 }

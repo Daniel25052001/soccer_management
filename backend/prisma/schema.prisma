@@ -81,6 +81,7 @@ model Player {
   documentId    String          @unique
   defaultDorsal Int?
   position      PlayerPosition?
+  isPaid        Boolean         @default(false) // Campo de estado de pago de inscripción
   createdAt     DateTime        @default(now())
 
   team      Team                @relation(fields: [teamId], references: [id], onDelete: Cascade)

@@ -3,6 +3,9 @@ import { TextField, MenuItem, IconButton, Box } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import type { BulkPlayerDto } from '../services/players.service';
 
+/**
+ * Propiedades para el componente de fila individual en el registro masivo de jugadores.
+ */
 interface RowProps {
     index: number;
     player: BulkPlayerDto;
@@ -11,6 +14,9 @@ interface RowProps {
     disableRemove: boolean;
 }
 
+/**
+ * Listado oficial de posiciones permitidas en la cancha para el selector.
+ */
 const POSITIONS = [
     { value: 'GOALKEEPER', label: 'Portero' },
     { value: 'DEFENDER', label: 'Defensa' },
@@ -19,6 +25,10 @@ const POSITIONS = [
     { value: 'FORWARD', label: 'Delantero' },
 ];
 
+/**
+ * Componente que representa una fila de formulario para la creación masiva de jugadores.
+ * Utiliza React.memo para optimizar el rendimiento y evitar re-renderizados innecesarios.
+ */
 export const PlayerRow: React.FC<RowProps> = memo(({
     index,
     player,
@@ -40,6 +50,7 @@ export const PlayerRow: React.FC<RowProps> = memo(({
                 flexWrap: { xs: 'wrap', md: 'nowrap' },
             }}
         >
+            {/* Campo de Nombre */}
             <TextField
                 label="Nombre *"
                 size="small"
@@ -47,6 +58,8 @@ export const PlayerRow: React.FC<RowProps> = memo(({
                 onChange={(e) => onChange(index, 'firstName', e.target.value)}
                 sx={{ flex: 2, minWidth: '130px' }}
             />
+
+            {/* Campo de Apellido */}
             <TextField
                 label="Apellido *"
                 size="small"
@@ -54,6 +67,8 @@ export const PlayerRow: React.FC<RowProps> = memo(({
                 onChange={(e) => onChange(index, 'lastName', e.target.value)}
                 sx={{ flex: 2, minWidth: '130px' }}
             />
+
+            {/* Campo de Documento de Identidad */}
             <TextField
                 label="Documento *"
                 size="small"
@@ -61,6 +76,8 @@ export const PlayerRow: React.FC<RowProps> = memo(({
                 onChange={(e) => onChange(index, 'documentId', e.target.value)}
                 sx={{ flex: 1.5, minWidth: '110px' }}
             />
+
+            {/* Campo de Dorsal (Número de camiseta) */}
             <TextField
                 label="Dorsal"
                 size="small"
@@ -69,6 +86,8 @@ export const PlayerRow: React.FC<RowProps> = memo(({
                 onChange={(e) => onChange(index, 'defaultDorsal', e.target.value ? Number(e.target.value) : undefined)}
                 sx={{ width: '90px', flexShrink: 0 }}
             />
+
+            {/* Selector de Posición en el Campo */}
             <TextField
                 select
                 label="Posición"
@@ -84,6 +103,7 @@ export const PlayerRow: React.FC<RowProps> = memo(({
                 ))}
             </TextField>
 
+            {/* Botón para eliminar la fila actual */}
             <IconButton
                 color="error"
                 onClick={() => onRemove(index)}
