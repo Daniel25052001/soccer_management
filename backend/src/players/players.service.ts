@@ -8,7 +8,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePlayerDto } from './dto/create-player.dto';
 import { UpdatePlayerDto } from './dto/update-player.dto';
-import { Prisma } from '@prisma/client';
+import { Prisma, PlayerPosition } from '@prisma/client';
 
 @Injectable()
 export class PlayersService {
@@ -37,7 +37,7 @@ export class PlayersService {
             String(createPlayerDto.defaultDorsal) !== ''
             ? Number(createPlayerDto.defaultDorsal)
             : null,
-        position: createPlayerDto.position || null,
+        position: createPlayerDto.position ? (createPlayerDto.position as PlayerPosition) : null,
       },
       include: {
         team: true,
@@ -50,12 +50,57 @@ export class PlayersService {
    * Obtiene todos los jugadores registrados con su equipo asociado y sus eventos (goles/tarjetas).
    */
   async findAll() {
-    return this.prisma.player.findMany({
+    const players = await this.prisma.player.findMany({
       orderBy: { lastName: 'asc' },
       include: {
         team: true,
-        events: true, // Se añaden los eventos para que el frontend pueda calcular estadísticas
+        events: {
+          include: {
+            match: {
+              include: {
+                homeTeam: true,
+                awayTeam: true,
+              },
+            },
+          },
+        },
+        sanctions: true,
       },
+    });
+
+    return players.map((player) => {
+      // 1. Contamos amarillas y rojas de los eventos (incluyendo doble amarilla si aplica)
+      const yellowCards = player.events.filter((e) => e.type === 'YELLOW_CARD').length;
+      const redCards = player.events.filter(
+        (e) => e.type === 'RED_CARD' || e.type === 'DOUBLE_YELLOW_RED',
+      ).length;
+
+      // 2. Verificamos sanciones de forma segura por si el campo status varía
+      const hasActiveSanction = player.sanctions?.some(
+        (s: any) => s.status === 'PENDING' || s.status === 'ACTIVE',
+      ) || false;
+
+      // 3. Regla de habilitación
+      const isPaid = player.isPaid;
+      const canPlay = isPaid && !hasActiveSanction && redCards === 0 && yellowCards < 3;
+
+      // 4. Motivo de suspensión
+      let suspensionReason: string | null = null;
+      if (!isPaid) {
+        suspensionReason = 'Pago de inscripción pendiente';
+      } else if (hasActiveSanction || redCards > 0) {
+        suspensionReason = 'Suspendido (Tarjeta Roja / Sanción activa)';
+      } else if (yellowCards >= 3) {
+        suspensionReason = 'Acumulación de amarillas (3 o más)';
+      }
+
+      return {
+        ...player,
+        yellowCards,
+        redCards,
+        canPlay,
+        suspensionReason,
+      };
     });
   }
 
@@ -140,7 +185,7 @@ export class PlayersService {
           : null;
     }
     if (updatePlayerDto.position !== undefined) {
-      dataToUpdate.position = updatePlayerDto.position || null;
+      dataToUpdate.position = updatePlayerDto.position ? (updatePlayerDto.position as PlayerPosition) : null;
     }
 
     try {
@@ -214,6 +259,7 @@ export class PlayersService {
       ...p,
       teamId: Number(teamId),
       defaultDorsal: p.defaultDorsal ? Number(p.defaultDorsal) : null,
+      position: p.position ? (p.position as PlayerPosition) : null,
     }));
 
     return this.prisma.player.createMany({
@@ -221,6 +267,21 @@ export class PlayersService {
       skipDuplicates: true, // Evita errores si una cédula ya existe
     });
   }
+
+  async togglePaymentStatus(id: number, isPaid: boolean) {
+    return this.prisma.player.update({
+      where: { id },
+      data: { isPaid },
+      include: {
+        team: true,
+        events: true,
+        sanctions: true,
+      },
+    });
+  }
+
+
+
 
 
 }

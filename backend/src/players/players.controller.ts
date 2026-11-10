@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe } from '@nestjs/common';
 import { PlayersService } from './players.service';
 import { CreatePlayerDto } from './dto/create-player.dto';
 import { UpdatePlayerDto } from './dto/update-player.dto';
@@ -35,6 +35,14 @@ export class PlayersController {
   @Post('bulk')
   async createMany(@Body() body: { teamId: number; players: any[] }) {
     return this.playersService.createMany(body.teamId, body.players);
+  }
+
+  @Patch(':id/toggle-payment')
+  async togglePayment(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('isPaid') isPaid: boolean,
+  ) {
+    return this.playersService.togglePaymentStatus(id, isPaid);
   }
 
 }

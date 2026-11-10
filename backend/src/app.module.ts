@@ -11,9 +11,19 @@ import { MatchEventsModule } from './match-events/match-events.module';
 import { SanctionsModule } from './sanctions/sanctions.module';
 import { StandingsModule } from './standings/standings.module';
 import { TournamentStandingsModule } from './tournament-standings/tournament-standings.module';
+import { RefereesModule } from './referees/referees.module';
 
+/**
+ * Módulo raíz de la aplicación NestJS (GolAdmin Backend).
+ * Agrupa y centraliza todos los submódulos de la arquitectura del torneo,
+ * la conexión a la base de datos (Prisma) y los servicios globales.
+ */
 @Module({
-  imports: [PrismaModule,
+  imports: [
+    // Módulo de Base de Datos
+    PrismaModule,
+
+    // Submódulos de gestión principal
     TournamentsModule,
     TeamsModule,
     PlayersModule,
@@ -22,7 +32,9 @@ import { TournamentStandingsModule } from './tournament-standings/tournament-sta
     MatchEventsModule,
     SanctionsModule,
     StandingsModule,
-    TournamentStandingsModule],
+    TournamentStandingsModule,
+    RefereesModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

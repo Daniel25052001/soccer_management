@@ -33,6 +33,7 @@ export interface Team {
     id: number;
     tournamentId?: number | null;
     name: string;
+    logoUrl?: string | null;
     delegateName?: string | null;
     delegatePhone?: string | null;
     createdAt: string;
@@ -46,6 +47,7 @@ export type CreateTeamDto = Omit<Team, 'id' | 'createdAt'>;
 export const PlayerPosition = {
     GOALKEEPER: 'GOALKEEPER',
     DEFENDER: 'DEFENDER',
+    FULLBACK: 'FULLBACK',
     MIDFIELDER: 'MIDFIELDER',
     FORWARD: 'FORWARD',
 } as const;
@@ -80,8 +82,20 @@ export interface MatchEvent {
 }
 
 /**
+ * Representa una sanción disciplinaria aplicada a un jugador.
+ */
+export interface Sanction {
+    id: number;
+    playerId: number;
+    matchId?: number | null;
+    reason: string;
+    status: 'PENDING' | 'ACTIVE' | 'SERVED' | 'CANCELLED';
+    createdAt: string;
+}
+
+/**
  * Representa a un jugador alineado con el esquema de Prisma en NestJS,
- * incluyendo de forma opcional su lista de eventos para estadísticas.
+ * incluyendo propiedades de control de pago, habilitación y eventos.
  */
 export interface Player {
     id: number;
@@ -91,12 +105,21 @@ export interface Player {
     documentId?: string | null;
     defaultDorsal?: number | null;
     position?: PlayerPosition | null;
+    isPaid: boolean;                    // Estado de pago de inscripción
     createdAt: string;
     team?: Team;
-    events?: MatchEvent[]; // Añadido para el conteo automático de goles y tarjetas
+    events?: MatchEvent[];              // Para conteo de goles y tarjetas
+    sanctions?: Sanction[];             // Para validación de sanciones activas
+    // Propiedades calculadas dinámicamente en backend o frontend
+    canPlay?: boolean;
+    suspensionReason?: string | null;
+    yellowCards?: number;
+    redCards?: number;
 }
 
-export type CreatePlayerDto = Omit<Player, 'id' | 'createdAt' | 'team' | 'events'>;
+export type CreatePlayerDto = Omit<Player, 'id' | 'createdAt' | 'team' | 'events' | 'sanctions' | 'canPlay' | 'suspensionReason' | 'yellowCards' | 'redCards'>;
+
+export type UpdatePlayerDto = Partial<CreatePlayerDto>;
 
 /**
  * Estados del ciclo de vida de un partido.
@@ -124,6 +147,8 @@ export interface Match {
     fieldNumber?: string | null;
     homeScore: number;
     awayScore: number;
+    refereeId?: number | null; // <-- Agrega esta línea
+    referee?: Referee | null;   // <-- Agrega esta línea
     homeSubsUsed?: number;
     homeWindowsUsed?: number;
     awaySubsUsed?: number;
@@ -156,18 +181,6 @@ export interface CreateMatchDto {
 /**
  * DTO para la actualización de marcador, estado o estadísticas de un partido.
  */
-<<<<<<< HEAD
-export type UpdateMatchDto = Partial<CreateMatchDto> & {
-    homeScore?: number | null;
-    awayScore?: number | null;
-    status?: MatchStatus;
-};
-
-/**
- * DTO para la actualización de datos de un jugador.
- */
-export type UpdatePlayerDto = Partial<CreatePlayerDto>;
-=======
 export interface UpdateMatchDto extends Partial<CreateMatchDto> {
     homeScore?: number;
     awayScore?: number;
@@ -175,5 +188,18 @@ export interface UpdateMatchDto extends Partial<CreateMatchDto> {
     homeWindowsUsed?: number;
     awaySubsUsed?: number;
     awayWindowsUsed?: number;
+    status?: MatchStatus;
 }
->>>>>>> feature/standings-table
+
+
+/**
+ * Entidad Árbitro (Referee).
+ */
+export interface Referee {
+    id: number;
+    name: string;
+    phone?: string | null;
+    email?: string | null;
+    status: string;
+    createdAt: string;
+}

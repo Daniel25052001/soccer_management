@@ -1,6 +1,14 @@
 import { apiClient } from '../../../api/apiClient';
 import type { CreatePlayerDto, Player } from '../../../types';
 
+export interface BulkPlayerDto {
+    firstName: string;
+    lastName: string;
+    documentId: string;
+    defaultDorsal?: number;
+    position?: string;
+}
+
 /**
  * Obtiene la lista completa de jugadores desde la API REST.
  */
@@ -14,6 +22,17 @@ export const getPlayers = async (): Promise<Player[]> => {
  */
 export const createPlayer = async (data: CreatePlayerDto): Promise<Player> => {
     const response = await apiClient.post<Player>('/players', data);
+    return response.data;
+};
+
+/**
+ * Registra varios jugadores en bloque para un equipo específico.
+ */
+export const createBulkPlayers = async (teamId: number, players: BulkPlayerDto[]): Promise<any> => {
+    const response = await apiClient.post('/players/bulk', {
+        teamId: Number(teamId),
+        players,
+    });
     return response.data;
 };
 
@@ -33,4 +52,19 @@ export const updatePlayer = async (
  */
 export const deletePlayer = async (id: number): Promise<void> => {
     await apiClient.delete(`/players/${id}`);
+};
+
+/**
+ * Cambia el estado de pago de inscripción de un jugador.
+ */
+export const togglePlayerPayment = async (id: number, isPaid: boolean): Promise<Player> => {
+    const response = await apiClient.patch<Player>(`/players/${id}/toggle-payment`, { isPaid });
+    return response.data;
+};
+
+/**
+ * Elimina un evento de partido (tarjeta u otro) por su ID.
+ */
+export const deleteMatchEvent = async (eventId: number): Promise<void> => {
+    await apiClient.delete(`/match-events/${eventId}`);
 };

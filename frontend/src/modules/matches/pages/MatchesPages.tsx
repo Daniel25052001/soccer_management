@@ -17,6 +17,9 @@ import {
     Tooltip,
     Menu,
     MenuItem,
+    Select,
+    FormControl,
+
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -25,19 +28,27 @@ import SportsIcon from '@mui/icons-material/Sports';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ScheduleIcon from '@mui/icons-material/Schedule';
-import type { Match, Team, Tournament, MatchStatus } from '../../../types';
+
+import type { Match, Team, Tournament, MatchStatus, Referee } from '../../../types';
 import { deleteMatch, getMatches, updateMatch } from '../services/matches.service';
 import { getTeams } from '../../teams/services/teams.service';
 import { getTournaments } from '../../tournaments/services/tournaments.service';
+import { getReferees } from '../../referees/services/referees.service';
 import { CreateMatchDialog } from '../components/CreateMatchDialog';
 import { ConfirmDeleteDialog } from '../../../components/ConfirmDeleteDialog';
 import { MatchEventsModal } from '../components/MatchEventsModal';
+import { apiClient } from '../../../api/apiClient';
 
+/**
+ * Componente principal para la gestión del calendario de partidos, 
+ * control de estados, actas de eventos y asignación de árbitros del torneo.
+ */
 export const MatchesPage: React.FC = () => {
     // Estados principales para la gestión de datos
     const [matches, setMatches] = useState<Match[]>([]);
     const [teams, setTeams] = useState<Team[]>([]);
     const [tournaments, setTournaments] = useState<Tournament[]>([]);
+    const [referees, setReferees] = useState<Referee[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -56,21 +67,26 @@ export const MatchesPage: React.FC = () => {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [statusMatchTarget, setStatusMatchTarget] = useState<Match | null>(null);
 
+    /**
+     * Carga inicial sincronizada de partidos, equipos, torneos y árbitros desde el servidor.
+     */
     const fetchData = useCallback(async () => {
         try {
             setLoading(true);
             setErrorMessage(null);
-            const [matchesData, teamsData, tournamentsData] = await Promise.all([
+            const [matchesData, teamsData, tournamentsData, refereesData] = await Promise.all([
                 getMatches(),
                 getTeams(),
                 getTournaments(),
+                getReferees(),
             ]);
             setMatches(matchesData);
             setTeams(teamsData);
             setTournaments(tournamentsData);
+            setReferees(refereesData);
         } catch (error) {
-            console.error('Error al cargar partidos:', error);
-            setErrorMessage('No se pudieron obtener los datos de los partidos.');
+            console.error('Error al cargar datos del calendario:', error);
+            setErrorMessage('No se pudieron obtener los datos necesarios del servidor.');
         } finally {
             setLoading(false);
         }
@@ -90,7 +106,9 @@ export const MatchesPage: React.FC = () => {
         setStatusMatchTarget(null);
     };
 
-    // Función para cambiar manualmente el estado del partido
+    /**
+     * Cambia manualmente el estado del partido (Programado, En Juego, Finalizado).
+     */
     const handleStatusChange = async (newStatus: MatchStatus) => {
         if (!statusMatchTarget) return;
         try {
@@ -105,6 +123,23 @@ export const MatchesPage: React.FC = () => {
         }
     };
 
+    /**
+     * Asigna o desasigna un árbitro a un partido específico de forma inmediata.
+     */
+    const handleAssignReferee = async (matchId: number, refereeId: number | null) => {
+        try {
+            setErrorMessage(null);
+            await apiClient.patch(`/matches/${matchId}/assign-referee`, { refereeId });
+            fetchData();
+        } catch (error) {
+            console.error('Error al asignar árbitro:', error);
+            setErrorMessage('No se pudo actualizar el árbitro asignado al partido.');
+        }
+    };
+
+    /**
+     * Ejecuta la eliminación del partido seleccionado tras confirmación.
+     */
     const confirmDelete = async () => {
         if (!selectedMatch) return;
         try {
@@ -128,6 +163,9 @@ export const MatchesPage: React.FC = () => {
         }
     };
 
+    /**
+     * Devuelve un chip estilizado según el estado actual del partido.
+     */
     const getStatusChip = (status: string) => {
         switch (status) {
             case 'FINISHED':
@@ -180,6 +218,7 @@ export const MatchesPage: React.FC = () => {
                                 <TableCell align="right"><b>Local</b></TableCell>
                                 <TableCell align="center"><b>Resultado</b></TableCell>
                                 <TableCell align="left"><b>Visitante</b></TableCell>
+                                <TableCell align="center"><b>Árbitro / Juez</b></TableCell>
                                 <TableCell align="center"><b>Estado</b></TableCell>
                                 <TableCell align="center"><b>Acciones</b></TableCell>
                             </TableRow>
@@ -187,7 +226,7 @@ export const MatchesPage: React.FC = () => {
                         <TableBody>
                             {matches.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} align="center">
+                                    <TableCell colSpan={8} align="center">
                                         No hay partidos programados en el sistema.
                                     </TableCell>
                                 </TableRow>
@@ -210,6 +249,27 @@ export const MatchesPage: React.FC = () => {
                                             </Typography>
                                         </TableCell>
                                         <TableCell align="left"><b>{match.awayTeam?.name}</b></TableCell>
+
+                                        {/* Columna de Asignación de Árbitro */}
+                                        <TableCell align="center">
+                                            <FormControl size="small" sx={{ minWidth: 150 }}>
+                                                <Select
+                                                    value={match.refereeId || ''}
+                                                    displayEmpty
+                                                    onChange={(e) => handleAssignReferee(match.id, e.target.value ? Number(e.target.value) : null)}
+                                                    sx={{ fontSize: '0.875rem' }}
+                                                >
+                                                    <MenuItem value="">
+                                                        <em>Sin asignar</em>
+                                                    </MenuItem>
+                                                    {referees.map((ref) => (
+                                                        <MenuItem key={ref.id} value={ref.id}>
+                                                            {ref.name}
+                                                        </MenuItem>
+                                                    ))}
+                                                </Select>
+                                            </FormControl>
+                                        </TableCell>
 
                                         {/* Estado con opción de despliegue al hacer clic */}
                                         <TableCell align="center">
@@ -324,3 +384,5 @@ export const MatchesPage: React.FC = () => {
         </Box>
     );
 };
+
+export default MatchesPage;
