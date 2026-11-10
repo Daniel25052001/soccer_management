@@ -19,7 +19,7 @@ import {
     MenuItem,
     Select,
     FormControl,
-
+    TablePagination, // Componente de paginación de MUI
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -41,7 +41,7 @@ import { apiClient } from '../../../api/apiClient';
 
 /**
  * Componente principal para la gestión del calendario de partidos, 
- * control de estados, actas de eventos y asignación de árbitros del torneo.
+ * control de estados, actas de eventos, asignación de árbitros y paginación del torneo.
  */
 export const MatchesPage: React.FC = () => {
     // Estados principales para la gestión de datos
@@ -51,6 +51,10 @@ export const MatchesPage: React.FC = () => {
     const [referees, setReferees] = useState<Referee[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+    // Estados para la paginación de la tabla
+    const [page, setPage] = useState<number>(0);
+    const [rowsPerPage, setRowsPerPage] = useState<number>(10);
 
     // Estados para modales de creación, edición y eliminación de partidos
     const [openCreateModal, setOpenCreateModal] = useState<boolean>(false);
@@ -95,6 +99,21 @@ export const MatchesPage: React.FC = () => {
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+
+    /**
+     * Cambia de página en la tabla de partidos.
+     */
+    const handleChangePage = (event: unknown, newPage: number) => {
+        setPage(newPage);
+    };
+
+    /**
+     * Modifica la cantidad de filas mostradas por página y reinicia a la primera página.
+     */
+    const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0);
+    };
 
     const handleStatusMenuOpen = (event: React.MouseEvent<HTMLElement>, match: Match) => {
         setAnchorEl(event.currentTarget);
@@ -179,6 +198,12 @@ export const MatchesPage: React.FC = () => {
         }
     };
 
+    // Subconjunto de partidos correspondientes a la página actual
+    const paginatedMatches = matches.slice(
+        page * rowsPerPage,
+        page * rowsPerPage + rowsPerPage
+    );
+
     return (
         <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -231,7 +256,7 @@ export const MatchesPage: React.FC = () => {
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                matches.map((match) => (
+                                paginatedMatches.map((match) => (
                                     <TableRow key={match.id} hover>
                                         <TableCell>
                                             {new Date(match.matchDate).toLocaleString('es-CO', {
@@ -324,6 +349,19 @@ export const MatchesPage: React.FC = () => {
                             )}
                         </TableBody>
                     </Table>
+
+                    {/* Controles de Paginación */}
+                    <TablePagination
+                        rowsPerPageOptions={[5, 10, 25, 50]}
+                        component="div"
+                        count={matches.length}
+                        rowsPerPage={rowsPerPage}
+                        page={page}
+                        onPageChange={handleChangePage}
+                        onRowsPerPageChange={handleChangeRowsPerPage}
+                        labelRowsPerPage="Partidos por página:"
+                        labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+                    />
                 </TableContainer>
             )}
 
