@@ -61,3 +61,10 @@ export const togglePlayerPayment = async (id: number, isPaid: boolean): Promise<
     const response = await apiClient.patch<Player>(`/players/${id}/toggle-payment`, { isPaid });
     return response.data;
 };
+
+/**
+ * Elimina un evento de partido (tarjeta u otro) por su ID.
+ */
+export const deleteMatchEvent = async (eventId: number): Promise<void> => {
+    await apiClient.delete(`/match-events/${eventId}`);
+};

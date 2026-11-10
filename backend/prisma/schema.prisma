@@ -110,6 +110,8 @@ model Match {
   homeArbitragePaid Boolean     @default(false)
   awayArbitragePaid Boolean     @default(false)
   createdAt         DateTime    @default(now())
+  refereeId Int?
+  referee   Referee? @relation("MatchReferee", fields: [refereeId], references: [id], onDelete: SetNull)
 
   tournament    Tournament          @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   homeTeam      Team                @relation("HomeTeam", fields: [homeTeamId], references: [id])
@@ -219,3 +221,14 @@ model Standing {
 
   @@unique([tournamentId, teamId])
 }
+
+model Referee {
+  id        Int      @id @default(autoincrement())
+  name      String
+  phone     String?
+  email     String?
+  status    String   @default("ACTIVE") // ACTIVE, INACTIVE
+  matches   Match[]  @relation("MatchReferee")
+  createdAt DateTime @default(now())
+}
+

@@ -174,4 +174,16 @@ export class MatchesService {
       );
     }
   }
+
+  async assignReferee(matchId: number, refereeId: number | null) {
+    return this.prisma.match.update({
+      where: { id: matchId },
+      data: { refereeId: refereeId ? Number(refereeId) : null },
+      include: {
+        homeTeam: true,
+        awayTeam: true,
+        referee: true,
+      },
+    });
+  }
 }

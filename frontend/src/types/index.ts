@@ -147,6 +147,8 @@ export interface Match {
     fieldNumber?: string | null;
     homeScore: number;
     awayScore: number;
+    refereeId?: number | null; // <-- Agrega esta línea
+    referee?: Referee | null;   // <-- Agrega esta línea
     homeSubsUsed?: number;
     homeWindowsUsed?: number;
     awaySubsUsed?: number;
@@ -187,4 +189,17 @@ export interface UpdateMatchDto extends Partial<CreateMatchDto> {
     awaySubsUsed?: number;
     awayWindowsUsed?: number;
     status?: MatchStatus;
+}
+
+
+/**
+ * Entidad Árbitro (Referee).
+ */
+export interface Referee {
+    id: number;
+    name: string;
+    phone?: string | null;
+    email?: string | null;
+    status: string;
+    createdAt: string;
 }

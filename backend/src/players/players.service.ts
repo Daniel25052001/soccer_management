@@ -54,15 +54,26 @@ export class PlayersService {
       orderBy: { lastName: 'asc' },
       include: {
         team: true,
-        events: true,
+        events: {
+          include: {
+            match: {
+              include: {
+                homeTeam: true,
+                awayTeam: true,
+              },
+            },
+          },
+        },
         sanctions: true,
       },
     });
 
     return players.map((player) => {
-      // 1. Contamos amarillas y rojas de los eventos
+      // 1. Contamos amarillas y rojas de los eventos (incluyendo doble amarilla si aplica)
       const yellowCards = player.events.filter((e) => e.type === 'YELLOW_CARD').length;
-      const redCards = player.events.filter((e) => e.type === 'RED_CARD').length;
+      const redCards = player.events.filter(
+        (e) => e.type === 'RED_CARD' || e.type === 'DOUBLE_YELLOW_RED',
+      ).length;
 
       // 2. Verificamos sanciones de forma segura por si el campo status varía
       const hasActiveSanction = player.sanctions?.some(

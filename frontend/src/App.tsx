@@ -7,6 +7,7 @@ import { TeamsPage } from './modules/teams/pages/TeamsPage';
 import { PlayersPage } from './modules/players/pages/PlayersPage';
 import { MatchesPage } from './modules/matches/pages/MatchesPages';
 import { StandingsPage } from './components/StandingsPage';
+import { RefereesPage } from './modules/referees/pages/RefereesPage'; // <-- NUEVO: Importamos la vista de árbitros
 
 const theme = createTheme({
   palette: {
@@ -37,9 +38,10 @@ export const App: React.FC = () => {
             <Route path="teams" element={<TeamsPage />} />
             <Route path="players" element={<PlayersPage />} />
             <Route path="matches" element={<MatchesPage />} />
-
-            {/* NUEVA RUTA: La tabla de posiciones ahora vive dentro del panel de opciones */}
             <Route path="standings" element={<StandingsPage />} />
+
+            {/* NUEVA RUTA: Gestión de árbitros y jueces del torneo */}
+            <Route path="referees" element={<RefereesPage />} />
           </Route>
 
           {/* =========================================================

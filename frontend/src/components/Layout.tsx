@@ -6,7 +6,7 @@ import GroupsIcon from '@mui/icons-material/Groups';
 import PersonIcon from '@mui/icons-material/Person';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import LeaderboardIcon from '@mui/icons-material/Leaderboard'; // Ícono para la tabla de posiciones
-
+import SportsIcon from '@mui/icons-material/Sports'; // Silbato deportivo
 export const Layout: React.FC = () => {
     return (
         <Box sx={{ flexGrow: 1 }}>
@@ -25,6 +25,14 @@ export const Layout: React.FC = () => {
                     </Button>
                     <Button color="inherit" component={Link} to="/admin/players" startIcon={<PersonIcon />}>
                         Jugadores
+                    </Button>
+                    <Button
+                        color="inherit"
+                        component={Link}
+                        to="/admin/referees"
+                        startIcon={<SportsIcon />}
+                    >
+                        Árbitros
                     </Button>
                     <Button color="inherit" component={Link} to="/admin/matches" startIcon={<CalendarMonthIcon />}>
                         Partidos
