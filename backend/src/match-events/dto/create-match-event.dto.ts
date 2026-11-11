@@ -1,5 +1,4 @@
-import { IsInt, IsNotEmpty, IsEnum, Min, Max } from 'class-validator';
-import { EventType } from '@prisma/client';
+import { IsInt, IsNotEmpty, IsString, Min, Max } from 'class-validator';
 
 /**
  * DTO para registrar un evento cronológico dentro de un partido.
@@ -30,11 +29,11 @@ export class CreateMatchEventDto {
     playerId: number;
 
     /**
-     * Tipo de incidencia (GOAL, YELLOW_CARD, RED_CARD, ASSIST, etc.).
+     * Tipo de incidencia ('GOAL', 'YELLOW_CARD', 'RED_CARD', 'OWN_GOAL', etc.).
      */
-    @IsEnum(EventType, { message: 'El tipo de evento no es válido.' })
+    @IsString({ message: 'El tipo de evento debe ser una cadena de texto.' })
     @IsNotEmpty({ message: 'El tipo de evento es obligatorio.' })
-    eventType: EventType;
+    eventType: string;
 
     /**
      * Minuto en el que ocurrió el evento (1 - 130).

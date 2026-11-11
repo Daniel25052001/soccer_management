@@ -3,11 +3,10 @@ import {
     IsNotEmpty,
     IsDateString,
     IsOptional,
-    IsEnum,
+    IsString,
     IsBoolean,
     Min,
 } from 'class-validator';
-import { MatchStatus } from '@prisma/client';
 
 /**
  * DTO para la creación/programación de un partido de Fútbol 11.
@@ -47,10 +46,11 @@ export class CreateMatchDto {
 
     /**
      * Estado inicial del juego (por defecto SCHEDULED).
+     * Valores permitidos: 'SCHEDULED', 'IN_PROGRESS', 'FINISHED', 'POSTPONED', 'CANCELLED'
      */
-    @IsEnum(MatchStatus, { message: 'El estado del partido no es válido.' })
+    @IsString({ message: 'El estado del partido debe ser una cadena de texto.' })
     @IsOptional()
-    status?: MatchStatus;
+    status?: string;
 
     /**
      * Marcador del equipo local.

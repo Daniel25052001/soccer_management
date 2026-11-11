@@ -54,7 +54,6 @@ export const MatchEventsModal: React.FC<MatchEventsModalProps> = ({
 }) => {
     const [events, setEvents] = useState<MatchEvent[]>([]);
     const [players, setPlayers] = useState<Player[]>([]);
-    const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
 
     // Estados del formulario para registrar una nueva incidencia
@@ -69,14 +68,11 @@ export const MatchEventsModal: React.FC<MatchEventsModalProps> = ({
     const fetchEvents = useCallback(async () => {
         if (!match) return;
         try {
-            setLoading(true);
             const data = await getMatchEvents(match.id);
             setEvents(data);
         } catch (err) {
             console.error('Error al cargar eventos:', err);
             setError('No se pudo cargar la cronología del partido.');
-        } finally {
-            setLoading(false);
         }
     }, [match]);
 
@@ -170,7 +166,7 @@ export const MatchEventsModal: React.FC<MatchEventsModalProps> = ({
                 {/* Marcador actual del encuentro */}
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 3, p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
                     <Typography variant="h5" sx={{ fontWeight: 'bold', mr: 2 }}>{match.homeTeam?.name}</Typography>
-                    <Chip label={`${match.homeScore} - ${match.awayScore}`} color="primary" sx={{ fontSize: '1.2rem', px: 2, py: 2 }} />
+                    <Chip label={`${match.homeScore ?? 0} - ${match.awayScore ?? 0}`} color="primary" sx={{ fontSize: '1.2rem', px: 2, py: 2 }} />
                     <Typography variant="h5" sx={{ fontWeight: 'bold', ml: 2 }}>{match.awayTeam?.name}</Typography>
                 </Box>
 
@@ -209,7 +205,7 @@ export const MatchEventsModal: React.FC<MatchEventsModalProps> = ({
                         >
                             {players.map((player) => (
                                 <MenuItem key={player.id} value={player.id}>
-                                    {player.defaultDorsal ? `#${player.defaultDorsal} - ` : ''}{player.firstName} {player.lastName}
+                                    {player.defaultDorsal ? `#${player.defaultDorsal} ` : ''}{player.firstName} {player.lastName}
                                 </MenuItem>
                             ))}
                         </TextField>

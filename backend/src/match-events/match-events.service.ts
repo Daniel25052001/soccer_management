@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMatchEventDto } from './dto/create-match-event.dto';
-import { EventType } from '@prisma/client';
 
 @Injectable()
 export class MatchEventsService {
@@ -52,7 +51,7 @@ export class MatchEventsService {
     });
 
     // Si el evento fue un Gol, recalcular el marcador
-    if (eventType === EventType.GOAL || eventType === EventType.OWN_GOAL) {
+    if (eventType === 'GOAL' || eventType === 'OWN_GOAL') {
       await this.updateMatchScore(matchId);
     }
 
@@ -86,8 +85,8 @@ export class MatchEventsService {
     const deletedEvent = await this.prisma.matchEvent.delete({ where: { id } });
 
     if (
-      event.type === EventType.GOAL ||
-      event.type === EventType.OWN_GOAL
+      event.type === 'GOAL' ||
+      event.type === 'OWN_GOAL'
     ) {
       await this.updateMatchScore(event.matchId);
     }
@@ -108,10 +107,10 @@ export class MatchEventsService {
     let awayScore = 0;
 
     for (const e of events) {
-      if (e.type === EventType.GOAL) {
+      if (e.type === 'GOAL') {
         if (e.teamId === match.homeTeamId) homeScore++;
         if (e.teamId === match.awayTeamId) awayScore++;
-      } else if (e.type === EventType.OWN_GOAL) {
+      } else if (e.type === 'OWN_GOAL') {
         // Un autogol suma un gol al rival
         if (e.teamId === match.homeTeamId) awayScore++;
         if (e.teamId === match.awayTeamId) homeScore++;

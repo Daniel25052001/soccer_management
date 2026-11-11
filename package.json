@@ -1,0 +1,34 @@
+{
+    "name": "goladmin-desktop",
+    "version": "1.0.0",
+    "description": "GolAdmin PWA Desktop Application",
+    "main": "electron/main.js",
+    "scripts": {
+        "build:backend": "cd backend && npm install && npm run build",
+        "build:frontend": "cd frontend && npm install && npm run build",
+        "build:all": "npm run build:backend && npm run build:frontend && electron-builder",
+        "electron:dev": "electron ."
+    },
+    "devDependencies": {
+        "electron": "^33.0.0",
+        "electron-builder": "^25.1.8",
+        "wait-on": "^7.2.0"
+    },
+    "build": {
+        "appId": "com.goladmin.pwa",
+        "productName": "GolAdmin PWA",
+        "directories": {
+            "output": "release"
+        },
+        "win": {
+            "target": [
+                {
+                    "target": "nsis",
+                    "arch": [
+                        "x64"
+                    ]
+                }
+            ]
+        }
+    }
+}

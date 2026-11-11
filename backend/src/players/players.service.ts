@@ -8,7 +8,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePlayerDto } from './dto/create-player.dto';
 import { UpdatePlayerDto } from './dto/update-player.dto';
-import { Prisma, PlayerPosition } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class PlayersService {
@@ -37,7 +37,7 @@ export class PlayersService {
             String(createPlayerDto.defaultDorsal) !== ''
             ? Number(createPlayerDto.defaultDorsal)
             : null,
-        position: createPlayerDto.position ? (createPlayerDto.position as PlayerPosition) : null,
+        position: createPlayerDto.position ? createPlayerDto.position : null,
       },
       include: {
         team: true,
@@ -185,7 +185,7 @@ export class PlayersService {
           : null;
     }
     if (updatePlayerDto.position !== undefined) {
-      dataToUpdate.position = updatePlayerDto.position ? (updatePlayerDto.position as PlayerPosition) : null;
+      dataToUpdate.position = updatePlayerDto.position ? updatePlayerDto.position : null;
     }
 
     try {
@@ -259,12 +259,11 @@ export class PlayersService {
       ...p,
       teamId: Number(teamId),
       defaultDorsal: p.defaultDorsal ? Number(p.defaultDorsal) : null,
-      position: p.position ? (p.position as PlayerPosition) : null,
+      position: p.position ? p.position : null,
     }));
 
     return this.prisma.player.createMany({
       data,
-      skipDuplicates: true, // Evita errores si una cédula ya existe
     });
   }
 
@@ -279,9 +278,4 @@ export class PlayersService {
       },
     });
   }
-
-
-
-
-
 }

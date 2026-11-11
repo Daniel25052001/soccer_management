@@ -1,52 +1,20 @@
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 generator client {
   provider = "prisma-client-js"
 }
 
-enum TournamentStatus {
-  DRAFT
-  IN_PROGRESS
-  FINISHED
-  CANCELLED
-}
-
-enum MatchStatus {
-  SCHEDULED
-  IN_PROGRESS
-  FINISHED
-  POSTPONED
-  CANCELLED
-}
-
-enum EventType {
-  GOAL
-  OWN_GOAL
-  YELLOW_CARD
-  RED_CARD
-  DOUBLE_YELLOW_RED
-  ASSIST
-}
-
-enum PlayerPosition {
-  GOALKEEPER
-  DEFENDER
-  FULLBACK     // <-- Incluido correctamente
-  MIDFIELDER
-  FORWARD
-}
-
 model Tournament {
-  id          Int              @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   name        String
   description String?
   startDate   DateTime
   endDate     DateTime?
-  status      TournamentStatus @default(DRAFT)
-  createdAt   DateTime         @default(now())
+  status      String   @default("DRAFT") // 'DRAFT', 'IN_PROGRESS', 'FINISHED', 'CANCELLED'
+  createdAt   DateTime @default(now())
 
   teams     Team[]
   matches   Match[]
@@ -74,15 +42,15 @@ model Team {
 }
 
 model Player {
-  id            Int             @id @default(autoincrement())
+  id            Int      @id @default(autoincrement())
   teamId        Int
   firstName     String
   lastName      String
-  documentId    String          @unique
+  documentId    String   @unique
   defaultDorsal Int?
-  position      PlayerPosition?
-  isPaid        Boolean         @default(false) // Campo de estado de pago de inscripción
-  createdAt     DateTime        @default(now())
+  position      String?  // 'GOALKEEPER', 'DEFENDER', 'FULLBACK', 'MIDFIELDER', 'FORWARD'
+  isPaid        Boolean  @default(false)
+  createdAt     DateTime @default(now())
 
   team      Team                @relation(fields: [teamId], references: [id], onDelete: Cascade)
   rosters   MatchRoster[]
@@ -95,23 +63,23 @@ model Player {
 }
 
 model Match {
-  id                Int         @id @default(autoincrement())
+  id                Int      @id @default(autoincrement())
   tournamentId      Int
   homeTeamId        Int
   awayTeamId        Int
   matchDate         DateTime
-  status            MatchStatus @default(SCHEDULED)
-  homeScore         Int         @default(0)
-  awayScore         Int         @default(0)
-  homeSubsUsed      Int         @default(0)
-  homeWindowsUsed   Int         @default(0)
-  awaySubsUsed      Int         @default(0)
-  awayWindowsUsed   Int         @default(0)
-  homeArbitragePaid Boolean     @default(false)
-  awayArbitragePaid Boolean     @default(false)
-  createdAt         DateTime    @default(now())
-  refereeId Int?
-  referee   Referee? @relation("MatchReferee", fields: [refereeId], references: [id], onDelete: SetNull)
+  status            String   @default("SCHEDULED") // 'SCHEDULED', 'IN_PROGRESS', 'FINISHED', 'POSTPONED', 'CANCELLED'
+  homeScore         Int      @default(0)
+  awayScore         Int      @default(0)
+  homeSubsUsed      Int      @default(0)
+  homeWindowsUsed   Int      @default(0)
+  awaySubsUsed      Int      @default(0)
+  awayWindowsUsed   Int      @default(0)
+  homeArbitragePaid Boolean  @default(false)
+  awayArbitragePaid Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  refereeId         Int?
+  referee           Referee? @relation("MatchReferee", fields: [refereeId], references: [id], onDelete: SetNull)
 
   tournament    Tournament          @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   homeTeam      Team                @relation("HomeTeam", fields: [homeTeamId], references: [id])
@@ -167,13 +135,13 @@ model MatchSubstitution {
 }
 
 model MatchEvent {
-  id        Int       @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   matchId   Int
   teamId    Int
   playerId  Int
-  type      EventType
+  type      String   // 'GOAL', 'OWN_GOAL', 'YELLOW_CARD', 'RED_CARD', 'DOUBLE_YELLOW_RED', 'ASSIST'
   minute    Int?
-  createdAt DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   match  Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
   team   Team   @relation(fields: [teamId], references: [id])
@@ -188,7 +156,7 @@ model Sanction {
   id               Int      @id @default(autoincrement())
   playerId         Int
   matchId          Int
-  fineAmount       Decimal  @default(0.00) @db.Decimal(10, 2)
+  fineAmount       Float    @default(0.00)
   isFinePaid       Boolean  @default(false)
   matchesSuspended Int      @default(0)
   matchesServed    Int      @default(0)
@@ -227,8 +195,7 @@ model Referee {
   name      String
   phone     String?
   email     String?
-  status    String   @default("ACTIVE") // ACTIVE, INACTIVE
+  status    String   @default("ACTIVE")
   matches   Match[]  @relation("MatchReferee")
   createdAt DateTime @default(now())
 }
-

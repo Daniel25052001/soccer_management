@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Dialog,
     DialogTitle,
@@ -7,151 +7,201 @@ import {
     Button,
     TextField,
     MenuItem,
-    Box,
-    Typography,
     Alert,
+    FormControlLabel,
+    Checkbox,
 } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import type { Team } from '../../../types';
-import { createBulkPlayers } from '../services/players.service';
-import { PlayerRow } from './PlayerRow';
+import type { Team, CreatePlayerDto, Player } from '../../../types';
+import { createPlayer, updatePlayer } from '../services/players.service';
 
-export interface BulkPlayerDto {
-    firstName: string;
-    lastName: string;
-    documentId: string;
-    defaultDorsal?: number;
-    position?: string;
-}
-
-interface Props {
+interface CreateBulkPlayerDialogProps {
     open: boolean;
-    onClose: () => void;
     teams: Team[];
+    playerToEdit?: Player | null;
+    onClose: () => void;
     onSuccess: () => void;
 }
 
-export const CreateBulkPlayersDialog: React.FC<Props> = ({
+export const CreateBulkPlayersDialog: React.FC<CreateBulkPlayerDialogProps> = ({
     open,
-    onClose,
     teams,
+    playerToEdit,
+    onClose,
     onSuccess,
 }) => {
-    const [selectedTeamId, setSelectedTeamId] = useState<number | ''>('');
-    const [players, setPlayers] = useState<BulkPlayerDto[]>([
-        { firstName: '', lastName: '', documentId: '', defaultDorsal: undefined, position: '' },
-    ]);
+    const [teamId, setTeamId] = useState<number | ''>('');
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [documentId, setDocumentId] = useState('');
+    const [defaultDorsal, setDefaultDorsal] = useState<number | ''>('');
+    const [position, setPosition] = useState<string>('');
+    const [isPaid, setIsPaid] = useState<boolean>(true);
+
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const handleAddRow = () => {
-        setPlayers((prev) => [
-            ...prev,
-            { firstName: '', lastName: '', documentId: '', defaultDorsal: undefined, position: '' },
-        ]);
-    };
-
-    const handleRemoveRow = useCallback((index: number) => {
-        setPlayers((prev) => (prev.length === 1 ? prev : prev.filter((_, i) => i !== index)));
-    }, []);
-
-    const handleChange = useCallback((index: number, field: keyof BulkPlayerDto, value: any) => {
-        setPlayers((prev) => {
-            const updated = [...prev];
-            updated[index] = { ...updated[index], [field]: value };
-            return updated;
-        });
-    }, []);
-
-    const handleSubmit = async () => {
-        if (!selectedTeamId) {
-            setError('Por favor selecciona un equipo al cual registrar los jugadores.');
-            return;
+    useEffect(() => {
+        if (playerToEdit) {
+            setTeamId(playerToEdit.teamId || '');
+            setFirstName(playerToEdit.firstName || '');
+            setLastName(playerToEdit.lastName || '');
+            setDocumentId(playerToEdit.documentId || '');
+            setDefaultDorsal(playerToEdit.defaultDorsal ?? '');
+            setPosition(playerToEdit.position || '');
+            setIsPaid(playerToEdit.isPaid ?? true);
+        } else {
+            setTeamId('');
+            setFirstName('');
+            setLastName('');
+            setDocumentId('');
+            setDefaultDorsal('');
+            setPosition('');
+            setIsPaid(true);
         }
+        setError(null);
+    }, [playerToEdit, open]);
 
-        for (const p of players) {
-            if (!p.firstName || !p.lastName || !p.documentId) {
-                setError('Por favor completa los campos obligatorios (Nombre, Apellido y Documento) en todas las filas.');
-                return;
-            }
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!teamId || !firstName.trim() || !lastName.trim() || !documentId.trim()) {
+            setError('Por favor completa todos los campos obligatorios.');
+            return;
         }
 
         try {
             setLoading(true);
             setError(null);
-            await createBulkPlayers(Number(selectedTeamId), players);
+
+            const payload: CreatePlayerDto = {
+                teamId: Number(teamId),
+                firstName: firstName.trim(),
+                lastName: lastName.trim(),
+                documentId: documentId.trim(),
+                defaultDorsal: defaultDorsal !== '' ? Number(defaultDorsal) : undefined,
+                position: position ? position : undefined,
+                isPaid: isPaid,
+            };
+
+            if (playerToEdit) {
+                await updatePlayer(playerToEdit.id, payload);
+            } else {
+                await createPlayer(payload);
+            }
+
             onSuccess();
             onClose();
-            // Limpiar formulario
-            setPlayers([{ firstName: '', lastName: '', documentId: '', defaultDorsal: undefined, position: '' }]);
-            setSelectedTeamId('');
         } catch (err: any) {
-            console.error(err);
-            setError(err.response?.data?.message || 'Ocurrió un error al registrar los jugadores en bloque.');
+            console.error('Error al guardar jugador:', err);
+            setError(err.response?.data?.message || 'Ocurrió un error al guardar el jugador.');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
-            <DialogTitle>Carga Masiva de Jugadores</DialogTitle>
-            <DialogContent dividers>
-                {error && (
-                    <Alert severity="error" sx={{ mb: 2 }}>
-                        {error}
-                    </Alert>
-                )}
+        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+            <DialogTitle>{playerToEdit ? 'Editar Jugador' : 'Registrar Nuevo Jugador'}</DialogTitle>
+            <form onSubmit={handleSubmit}>
+                <DialogContent dividers>
+                    {error && (
+                        <Alert severity="error" sx={{ mb: 2 }}>
+                            {error}
+                        </Alert>
+                    )}
 
-                {/* Selector de Equipo */}
-                <TextField
-                    select
-                    label="Seleccionar Equipo *"
-                    value={selectedTeamId}
-                    onChange={(e) => setSelectedTeamId(Number(e.target.value))}
-                    fullWidth
-                    size="small"
-                    sx={{ mb: 3 }}
-                >
-                    {teams.map((team) => (
-                        <MenuItem key={team.id} value={team.id}>
-                            {team.name}
-                        </MenuItem>
-                    ))}
-                </TextField>
+                    <TextField
+                        select
+                        label="Equipo *"
+                        value={teamId}
+                        onChange={(e) => setTeamId(Number(e.target.value))}
+                        fullWidth
+                        size="small"
+                        sx={{ mb: 2 }}
+                    >
+                        {teams.map((team) => (
+                            <MenuItem key={team.id} value={team.id}>
+                                {team.name}
+                            </MenuItem>
+                        ))}
+                    </TextField>
 
-                <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-                    Agrega los jugadores que necesites a la lista. Todos se registrarán en el equipo seleccionado.
-                </Typography>
-
-                {players.map((player, index) => (
-                    <PlayerRow
-                        key={index}
-                        index={index}
-                        player={player}
-                        onChange={handleChange}
-                        onRemove={handleRemoveRow}
-                        disableRemove={players.length === 1}
+                    <TextField
+                        label="Nombres *"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        fullWidth
+                        size="small"
+                        sx={{ mb: 2 }}
                     />
-                ))}
 
-                <Button
-                    startIcon={<AddIcon />}
-                    variant="outlined"
-                    onClick={handleAddRow}
-                    sx={{ mt: 1 }}
-                >
-                    Añadir otra fila
-                </Button>
-            </DialogContent>
-            <DialogActions>
-                <Button onClick={onClose} color="inherit">
-                    Cancelar
-                </Button>
-                <Button onClick={handleSubmit} variant="contained" disabled={loading}>
-                    {loading ? 'Guardando...' : 'Guardar Jugadores'}
-                </Button>
-            </DialogActions>
+                    <TextField
+                        label="Apellidos *"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        fullWidth
+                        size="small"
+                        sx={{ mb: 2 }}
+                    />
+
+                    <TextField
+                        label="Documento de Identidad *"
+                        value={documentId}
+                        onChange={(e) => setDocumentId(e.target.value)}
+                        fullWidth
+                        size="small"
+                        sx={{ mb: 2 }}
+                    />
+
+                    <TextField
+                        label="Dorsal (Número)"
+                        type="number"
+                        value={defaultDorsal}
+                        onChange={(e) => setDefaultDorsal(e.target.value !== '' ? Number(e.target.value) : '')}
+                        fullWidth
+                        size="small"
+                        sx={{ mb: 2 }}
+                    />
+
+                    <TextField
+                        select
+                        label="Posición"
+                        value={position}
+                        onChange={(e) => setPosition(e.target.value)}
+                        fullWidth
+                        size="small"
+                        sx={{ mb: 2 }}
+                    >
+                        <MenuItem value="">
+                            <em>Ninguna / Sin especificar</em>
+                        </MenuItem>
+                        <MenuItem value="GOALKEEPER">Arquero</MenuItem>
+                        <MenuItem value="DEFENDER">Defensa</MenuItem>
+                        <MenuItem value="MIDFIELDER">Mediocampista</MenuItem>
+                        <MenuItem value="FORWARD">Delantero</MenuItem>
+                    </TextField>
+
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={isPaid}
+                                onChange={(e) => setIsPaid(e.target.checked)}
+                                color="primary"
+                            />
+                        }
+                        label="Inscripción pagada"
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={onClose} color="inherit" disabled={loading}>
+                        Cancelar
+                    </Button>
+                    <Button type="submit" variant="contained" disabled={loading}>
+                        {loading ? 'Guardando...' : playerToEdit ? 'Actualizar' : 'Registrar'}
+                    </Button>
+                </DialogActions>
+            </form>
         </Dialog>
     );
 };
+
+export default CreateBulkPlayersDialog;

@@ -1,5 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsEnum, IsDateString } from 'class-validator';
-import { TournamentStatus } from '@prisma/client';
+import { IsString, IsNotEmpty, IsOptional, IsDateString } from 'class-validator';
 
 /**
  * Data Transfer Object (DTO) para la creación de un Torneo.
@@ -38,10 +37,10 @@ export class CreateTournamentDto {
     endDate?: string;
 
     /**
-     * Estado actual del torneo (DRAFT, IN_PROGRESS, FINISHED, CANCELLED).
+     * Estado actual del torneo ('DRAFT', 'IN_PROGRESS', 'FINISHED', 'CANCELLED').
      * Por defecto toma el valor DRAFT en la base de datos si se omite.
      */
-    @IsEnum(TournamentStatus, { message: 'El estado debe ser un valor válido de TournamentStatus.' })
+    @IsString({ message: 'El estado debe ser una cadena de texto.' })
     @IsOptional()
-    status?: TournamentStatus;
+    status?: string;
 }

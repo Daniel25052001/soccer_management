@@ -5,10 +5,8 @@ import {
     IsInt,
     Min,
     Max,
-    IsEnum,
     IsBoolean
 } from 'class-validator';
-import { PlayerPosition } from '@prisma/client';
 
 export class CreatePlayerDto {
     @IsInt({ message: 'El ID del equipo debe ser un número entero.' })
@@ -33,9 +31,13 @@ export class CreatePlayerDto {
     @IsOptional()
     defaultDorsal?: number;
 
-    @IsEnum(PlayerPosition, { message: 'La posición ingresada no es válida.' })
+    /**
+     * Posición del jugador.
+     * Valores permitidos: 'GOALKEEPER', 'DEFENDER', 'FULLBACK', 'MIDFIELDER', 'FORWARD'
+     */
+    @IsString({ message: 'La posición ingresada debe ser una cadena de texto.' })
     @IsOptional()
-    position?: PlayerPosition;
+    position?: string;
 
     @IsBoolean()
     @IsOptional()

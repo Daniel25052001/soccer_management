@@ -104,7 +104,7 @@ export interface Player {
     lastName: string;
     documentId?: string | null;
     defaultDorsal?: number | null;
-    position?: PlayerPosition | null;
+    position?: string | null; // <-- Cámbialo de PlayerPosition a string
     isPaid: boolean;                    // Estado de pago de inscripción
     createdAt: string;
     team?: Team;

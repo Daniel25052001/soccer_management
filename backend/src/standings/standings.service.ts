@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { EventType, MatchStatus } from '@prisma/client';
 
 export interface TeamStanding {
     teamId: number;
@@ -30,7 +29,7 @@ export class StandingsService {
         const finishedMatches = await this.prisma.match.findMany({
             where: {
                 tournamentId: Number(tournamentId),
-                status: MatchStatus.FINISHED,
+                status: 'FINISHED',
             },
             include: {
                 homeTeam: true,
@@ -124,10 +123,10 @@ export class StandingsService {
 
         const goals = await this.prisma.matchEvent.findMany({
             where: {
-                type: EventType.GOAL,
+                type: 'GOAL',
                 match: {
                     tournamentId: parsedTournamentId,
-                    status: MatchStatus.FINISHED,
+                    status: 'FINISHED',
                 },
             },
             include: {

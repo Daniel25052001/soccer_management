@@ -103,7 +103,7 @@ export const MatchesPage: React.FC = () => {
     /**
      * Cambia de página en la tabla de partidos.
      */
-    const handleChangePage = (event: unknown, newPage: number) => {
+    const handleChangePage = (_event: unknown, newPage: number) => {
         setPage(newPage);
     };
 
@@ -270,7 +270,7 @@ export const MatchesPage: React.FC = () => {
                                             <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
                                                 {match.status === 'SCHEDULED'
                                                     ? 'vs'
-                                                    : `${match.homeScore} - ${match.awayScore}`}
+                                                    : `${match.homeScore ?? 0} - ${match.awayScore ?? 0}`}
                                             </Typography>
                                         </TableCell>
                                         <TableCell align="left"><b>{match.awayTeam?.name}</b></TableCell>

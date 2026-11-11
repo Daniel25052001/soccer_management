@@ -57,7 +57,7 @@ export const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
                 defaultDorsal: player.defaultDorsal !== null && player.defaultDorsal !== undefined
                     ? String(player.defaultDorsal)
                     : '',
-                position: player.position || '',
+                position: (player.position ? String(player.position) : '') as any,
             });
         }
     }, [player]);

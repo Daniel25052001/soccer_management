@@ -50,8 +50,8 @@ export const UpdateScoreDialog: React.FC<UpdateScoreDialogProps> = ({
             setError(null);
 
             await updateMatch(match.id, {
-                homeScore: homeScore !== '' ? Number(homeScore) : null,
-                awayScore: awayScore !== '' ? Number(awayScore) : null,
+                homeScore: homeScore !== '' ? Number(homeScore) : undefined,
+                awayScore: awayScore !== '' ? Number(awayScore) : undefined,
                 status,
             });
 
@@ -82,50 +82,6 @@ export const UpdateScoreDialog: React.FC<UpdateScoreDialogProps> = ({
                     {match && (
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'center' }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, width: '100%' }}>
-                                <Box sx={{ textAlign: 'center', flex: 1 }}>
-                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                                        {match.homeTeam?.name || `Equipo ${match.homeTeamId}`}
-                                    </Typography>
-                                    <TextField
-                                        type="number"
-                                        value={homeScore}
-                                        onChange={(e) => setHomeScore(e.target.value)}
-                                        slotProps={{
-                                            htmlInput: {
-                                                min: 0,
-                                                style: { textAlign: 'center', fontSize: '1.2rem' },
-                                            },
-                                        }}
-                                        sx={{ mt: 1, width: '80px' }}
-                                    />
-                                </Box>
-
-                                <Typography variant="h5" sx={{ fontWeight: 'bold', mt: 2 }}>
-                                    VS
-                                </Typography>
-
-                                <Box sx={{ textAlign: 'center', flex: 1 }}>
-                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                                        {match.awayTeam?.name || `Equipo ${match.awayTeamId}`}
-                                    </Typography>
-                                    <TextField
-                                        type="number"
-                                        value={awayScore}
-                                        onChange={(e) => setAwayScore(e.target.value)}
-                                        slotProps={{
-                                            htmlInput: {
-                                                min: 0,
-                                                style: { textAlign: 'center', fontSize: '1.2rem' },
-                                            },
-                                        }}
-                                        sx={{ mt: 1, width: '80px' }}
-                                    />
-                                </Box>
-
-                                <Typography variant="h5" sx={{ fontWeight: 'bold', mt: 2 }}>
-                                    VS
-                                </Typography>
-
                                 <Box sx={{ textAlign: 'center', flex: 1 }}>
                                     <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                                         {match.homeTeam?.name || `Equipo ${match.homeTeamId}`}
