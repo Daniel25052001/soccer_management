@@ -43,11 +43,6 @@ import { EditPlayerDialog } from '../components/EditPlayerDialog';
 import { ConfirmDeleteDialog } from '../../../components/ConfirmDeleteDialog';
 import { CreateBulkPlayersDialog } from '../components/CreateBulkPlayersDialog';
 
-/**
- * Componente principal para la administración de jugadores en el torneo.
- * Permite filtrar por nombre y equipo, visualizar estadísticas, gestionar inscripciones (pagos),
- * verificar estados de habilitación, consultar historial detallado de tarjetas y realizar operaciones CRUD.
- */
 export const PlayersPage: React.FC = () => {
     const [players, setPlayers] = useState<Player[]>([]);
     const [teams, setTeams] = useState<Team[]>([]);
@@ -72,9 +67,6 @@ export const PlayersPage: React.FC = () => {
     const [page, setPage] = useState<number>(0);
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
 
-    /**
-     * Carga inicial de datos de jugadores y equipos desde el servidor.
-     */
     const fetchData = useCallback(async () => {
         try {
             setLoading(true);
@@ -94,34 +86,22 @@ export const PlayersPage: React.FC = () => {
         fetchData();
     }, [fetchData]);
 
-    /**
-     * Obtiene el nombre del equipo asociado al jugador.
-     */
     const getTeamName = (player: Player): string => {
         if (player.team) return player.team.name;
         const found = teams.find((t) => t.id === player.teamId);
         return found ? found.name : `Equipo #${player.teamId}`;
     };
 
-    /**
-     * Calcula la cantidad de goles anotados por el jugador a partir de sus eventos.
-     */
     const getPlayerGoals = (player: Player): number => {
         if (!player.events) return 0;
         return player.events.filter((e) => e.type === 'GOAL').length;
     };
 
-    /**
-     * Calcula la cantidad de tarjetas amarillas acumuladas.
-     */
     const getPlayerYellowCards = (player: Player): number => {
         if (!player.events) return 0;
         return player.events.filter((e) => e.type === 'YELLOW_CARD').length;
     };
 
-    /**
-     * Calcula la cantidad de tarjetas rojas recibidas.
-     */
     const getPlayerRedCards = (player: Player): number => {
         if (!player.events) return 0;
         return player.events.filter((e) => e.type === 'RED_CARD' || e.type === 'DOUBLE_YELLOW_RED').length;
@@ -137,23 +117,15 @@ export const PlayersPage: React.FC = () => {
         setOpenDeleteDialog(true);
     };
 
-    /**
-     * Abre el modal de historial de tarjetas detallado para un jugador.
-     */
     const handleOpenCardHistory = (player: Player) => {
         setPlayerForCards(player);
         setOpenCardsModal(true);
     };
 
-    /**
-     * Permite al administrador retirar/eliminar un evento de tarjeta específico.
-     */
     const handleDeleteCardEvent = async (eventId: number) => {
         try {
             await deleteMatchEvent(eventId);
-            fetchData(); // Recargamos la tabla principal
-
-            // Actualizamos inmediatamente el estado del modal local
+            fetchData();
             if (playerForCards && playerForCards.events) {
                 const updatedEvents = playerForCards.events.filter((e) => e.id !== eventId);
                 setPlayerForCards({
@@ -167,9 +139,6 @@ export const PlayersPage: React.FC = () => {
         }
     };
 
-    /**
-     * Ejecuta la eliminación del jugador seleccionado tras confirmación.
-     */
     const confirmDelete = async () => {
         if (!selectedPlayer) return;
         try {
@@ -186,13 +155,9 @@ export const PlayersPage: React.FC = () => {
         }
     };
 
-    /**
-     * Cambia el estado de pago de inscripción de un jugador y actualiza la UI de forma optimista.
-     */
     const handleTogglePayment = async (id: number, currentPaidStatus: boolean) => {
         const newStatus = !currentPaidStatus;
 
-        // Actualización optimista local del estado
         setPlayers((prevPlayers) =>
             prevPlayers.map((p) => {
                 if (p.id === id) {
@@ -214,16 +179,12 @@ export const PlayersPage: React.FC = () => {
         } catch (error) {
             console.error('Error al actualizar el estado de pago:', error);
             setErrorMessage('No se pudo actualizar el estado de pago en el servidor.');
-            // Revertir cambio local en caso de error
             setPlayers((prevPlayers) =>
                 prevPlayers.map((p) => (p.id === id ? { ...p, isPaid: currentPaidStatus } : p)),
             );
         }
     };
 
-    /**
-     * Traduce el identificador técnico de la posición a un formato legible en español.
-     */
     const getPositionLabel = (pos?: string | null) => {
         switch (pos) {
             case 'GOALKEEPER': return 'Portero';
@@ -235,7 +196,6 @@ export const PlayersPage: React.FC = () => {
         }
     };
 
-    // Filtrado dinámico por nombre de jugador y equipo
     const filteredPlayers = players.filter((player) => {
         const fullName = `${player.firstName} ${player.lastName}`.toLowerCase();
         const matchesName = fullName.includes(searchName.toLowerCase());
@@ -246,7 +206,6 @@ export const PlayersPage: React.FC = () => {
         return matchesName && matchesTeam;
     });
 
-    // Paginación aplicada sobre los elementos filtrados
     const paginatedPlayers = filteredPlayers.slice(
         page * rowsPerPage,
         page * rowsPerPage + rowsPerPage
@@ -263,7 +222,6 @@ export const PlayersPage: React.FC = () => {
 
     return (
         <Box>
-            {/* Cabecera y Botones de Acción principal */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
                 <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
                     Gestión de Jugadores
@@ -288,7 +246,6 @@ export const PlayersPage: React.FC = () => {
                 </Box>
             </Box>
 
-            {/* Barra de Filtros */}
             <Paper elevation={2} sx={{ p: 2, mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                 <TextField
                     label="Filtrar por nombre de jugador"
@@ -365,7 +322,6 @@ export const PlayersPage: React.FC = () => {
                                                 <TableCell>{getTeamName(p)}</TableCell>
                                                 <TableCell>{getPositionLabel(p.position)}</TableCell>
 
-                                                {/* Estadísticas de Goles */}
                                                 <TableCell align="center">
                                                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
                                                         <SportsSoccerIcon fontSize="small" color="primary" />
@@ -373,7 +329,6 @@ export const PlayersPage: React.FC = () => {
                                                     </Box>
                                                 </TableCell>
 
-                                                {/* Tarjetas Amarillas Clickeables */}
                                                 <TableCell align="center">
                                                     <Tooltip title="Clic para ver historial detallado de tarjetas">
                                                         <Chip
@@ -385,7 +340,6 @@ export const PlayersPage: React.FC = () => {
                                                     </Tooltip>
                                                 </TableCell>
 
-                                                {/* Tarjetas Rojas Clickeables */}
                                                 <TableCell align="center">
                                                     <Tooltip title="Clic para ver historial detallado de tarjetas">
                                                         <Chip
@@ -398,7 +352,6 @@ export const PlayersPage: React.FC = () => {
                                                     </Tooltip>
                                                 </TableCell>
 
-                                                {/* Chip indicador de Habilitación para jugar */}
                                                 <TableCell align="center">
                                                     <Tooltip title={canPlay ? 'Habilitado para jugar' : (p.suspensionReason || 'Inhabilitado')}>
                                                         <Chip
@@ -411,7 +364,6 @@ export const PlayersPage: React.FC = () => {
                                                     </Tooltip>
                                                 </TableCell>
 
-                                                {/* Switch interactivo de Estado de Pago */}
                                                 <TableCell align="center">
                                                     <Tooltip title={p.isPaid ? 'Inscripción pagada' : 'Pago pendiente (Clic para cambiar)'}>
                                                         <Switch
@@ -423,7 +375,6 @@ export const PlayersPage: React.FC = () => {
                                                     </Tooltip>
                                                 </TableCell>
 
-                                                {/* Botones de Acciones */}
                                                 <TableCell align="center">
                                                     <Tooltip title="Editar">
                                                         <IconButton color="primary" onClick={() => handleOpenEdit(p)}>
@@ -444,7 +395,6 @@ export const PlayersPage: React.FC = () => {
                         </Table>
                     </TableContainer>
 
-                    {/* Componente de Paginación */}
                     <TablePagination
                         component="div"
                         count={filteredPlayers.length}
@@ -459,7 +409,6 @@ export const PlayersPage: React.FC = () => {
                 </Paper>
             )}
 
-            {/* Modal de Historial Detallado de Tarjetas */}
             {openCardsModal && playerForCards && (
                 <Dialog open={openCardsModal} onClose={() => setOpenCardsModal(false)} maxWidth="sm" fullWidth>
                     <DialogTitle sx={{ fontWeight: 'bold' }}>
@@ -519,7 +468,6 @@ export const PlayersPage: React.FC = () => {
                 </Dialog>
             )}
 
-            {/* Modales del Sistema */}
             <CreatePlayerDialog
                 open={openCreateModal}
                 teams={teams}
@@ -527,14 +475,12 @@ export const PlayersPage: React.FC = () => {
                 onSuccess={fetchData}
             />
 
-            {teams.length > 0 && (
-                <CreateBulkPlayersDialog
-                    open={openBulkModal}
-                    teams={teams}
-                    onClose={() => setOpenBulkModal(false)}
-                    onSuccess={fetchData}
-                />
-            )}
+            <CreateBulkPlayersDialog
+                open={openBulkModal}
+                teams={teams}
+                onClose={() => setOpenBulkModal(false)}
+                onSuccess={fetchData}
+            />
 
             <EditPlayerDialog
                 open={openEditModal}

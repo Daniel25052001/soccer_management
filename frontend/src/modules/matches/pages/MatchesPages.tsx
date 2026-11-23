@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Typography,
     Button,
@@ -19,15 +19,24 @@ import {
     MenuItem,
     Select,
     FormControl,
-    TablePagination, // Componente de paginación de MUI
+    TablePagination,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    TextField,
+    InputAdornment,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import SportsIcon from '@mui/icons-material/Sports';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import CloseIcon from '@mui/icons-material/Close';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ScheduleIcon from '@mui/icons-material/Schedule';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 
 import type { Match, Team, Tournament, MatchStatus, Referee } from '../../../types';
 import { deleteMatch, getMatches, updateMatch } from '../services/matches.service';
@@ -38,19 +47,47 @@ import { CreateMatchDialog } from '../components/CreateMatchDialog';
 import { ConfirmDeleteDialog } from '../../../components/ConfirmDeleteDialog';
 import { MatchEventsModal } from '../components/MatchEventsModal';
 import { apiClient } from '../../../api/apiClient';
+import { MatchSheetView } from '../sheet';
 
 /**
- * Componente principal para la gestión del calendario de partidos, 
- * control de estados, actas de eventos, asignación de árbitros y paginación del torneo.
+ * Convierte una fecha ISO/Date a formato 'YYYY-MM-DD' en zona horaria local.
+ */
+function toLocalDateInputValue(dateInput: string | Date): string {
+    const d = new Date(dateInput);
+    if (Number.isNaN(d.getTime())) return '';
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+/**
+ * Normaliza texto para búsquedas insensibles a mayúsculas y tildes.
+ */
+function normalizeText(value: string): string {
+    return value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+}
+
+/**
+ * Componente principal para la gestión del calendario de partidos,
+ * filtros por fecha y equipo, control de estados, planilla digital y paginación.
  */
 export const MatchesPage: React.FC = () => {
-    // Estados principales para la gestión de datos
     const [matches, setMatches] = useState<Match[]>([]);
     const [teams, setTeams] = useState<Team[]>([]);
     const [tournaments, setTournaments] = useState<Tournament[]>([]);
     const [referees, setReferees] = useState<Referee[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+    // Estados de filtro por equipo y rango de fechas
+    const [teamSearch, setTeamSearch] = useState<string>('');
+    const [startDate, setStartDate] = useState<string>('');
+    const [endDate, setEndDate] = useState<string>('');
 
     // Estados para la paginación de la tabla
     const [page, setPage] = useState<number>(0);
@@ -67,13 +104,14 @@ export const MatchesPage: React.FC = () => {
     const [openEventsModal, setOpenEventsModal] = useState<boolean>(false);
     const [matchForEvents, setMatchForEvents] = useState<Match | null>(null);
 
+    // Estados para controlar el modal de la Planilla Digital completa
+    const [openSheetModal, setOpenSheetModal] = useState<boolean>(false);
+    const [matchForSheet, setMatchForSheet] = useState<Match | null>(null);
+
     // Estado para el menú desplegable de cambio manual de estado
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [statusMatchTarget, setStatusMatchTarget] = useState<Match | null>(null);
 
-    /**
-     * Carga inicial sincronizada de partidos, equipos, torneos y árbitros desde el servidor.
-     */
     const fetchData = useCallback(async () => {
         try {
             setLoading(true);
@@ -100,16 +138,43 @@ export const MatchesPage: React.FC = () => {
         fetchData();
     }, [fetchData]);
 
-    /**
-     * Cambia de página en la tabla de partidos.
-     */
+    // Lista filtrada por nombre de equipo (local o visitante) y rango de fechas
+    const filteredMatches = useMemo(() => {
+        const query = normalizeText(teamSearch);
+
+        return matches.filter((match) => {
+            if (query) {
+                const homeName = normalizeText(match.homeTeam?.name || '');
+                const awayName = normalizeText(match.awayTeam?.name || '');
+                if (!homeName.includes(query) && !awayName.includes(query)) {
+                    return false;
+                }
+            }
+
+            if (startDate || endDate) {
+                const matchDay = toLocalDateInputValue(match.matchDate);
+                if (!matchDay) return false;
+                if (startDate && matchDay < startDate) return false;
+                if (endDate && matchDay > endDate) return false;
+            }
+
+            return true;
+        });
+    }, [matches, teamSearch, startDate, endDate]);
+
+    const hasActiveFilters = Boolean(teamSearch.trim() || startDate || endDate);
+
+    const handleClearFilters = () => {
+        setTeamSearch('');
+        setStartDate('');
+        setEndDate('');
+        setPage(0);
+    };
+
     const handleChangePage = (_event: unknown, newPage: number) => {
         setPage(newPage);
     };
 
-    /**
-     * Modifica la cantidad de filas mostradas por página y reinicia a la primera página.
-     */
     const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
         setRowsPerPage(parseInt(event.target.value, 10));
         setPage(0);
@@ -125,9 +190,6 @@ export const MatchesPage: React.FC = () => {
         setStatusMatchTarget(null);
     };
 
-    /**
-     * Cambia manualmente el estado del partido (Programado, En Juego, Finalizado).
-     */
     const handleStatusChange = async (newStatus: MatchStatus) => {
         if (!statusMatchTarget) return;
         try {
@@ -142,9 +204,6 @@ export const MatchesPage: React.FC = () => {
         }
     };
 
-    /**
-     * Asigna o desasigna un árbitro a un partido específico de forma inmediata.
-     */
     const handleAssignReferee = async (matchId: number, refereeId: number | null) => {
         try {
             setErrorMessage(null);
@@ -156,9 +215,6 @@ export const MatchesPage: React.FC = () => {
         }
     };
 
-    /**
-     * Ejecuta la eliminación del partido seleccionado tras confirmación.
-     */
     const confirmDelete = async () => {
         if (!selectedMatch) return;
         try {
@@ -182,9 +238,6 @@ export const MatchesPage: React.FC = () => {
         }
     };
 
-    /**
-     * Devuelve un chip estilizado según el estado actual del partido.
-     */
     const getStatusChip = (status: string) => {
         switch (status) {
             case 'FINISHED':
@@ -198,8 +251,7 @@ export const MatchesPage: React.FC = () => {
         }
     };
 
-    // Subconjunto de partidos correspondientes a la página actual
-    const paginatedMatches = matches.slice(
+    const paginatedMatches = filteredMatches.slice(
         page * rowsPerPage,
         page * rowsPerPage + rowsPerPage
     );
@@ -222,6 +274,82 @@ export const MatchesPage: React.FC = () => {
                     Programar Partido
                 </Button>
             </Box>
+
+            {/* Barra de filtros por nombre de equipo y rango de fechas */}
+            <Paper
+                elevation={1}
+                sx={{
+                    p: 2,
+                    mb: 2.5,
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 2,
+                    alignItems: 'center',
+                }}
+            >
+                <TextField
+                    size="small"
+                    label="Buscar equipo"
+                    placeholder="Local o visitante..."
+                    value={teamSearch}
+                    onChange={(e) => {
+                        setTeamSearch(e.target.value);
+                        setPage(0);
+                    }}
+                    sx={{ minWidth: 230, flex: '1 1 220px' }}
+                    slotProps={{
+                        input: {
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <SearchIcon fontSize="small" color="action" />
+                                </InputAdornment>
+                            ),
+                        },
+                    }}
+                />
+
+                <TextField
+                    size="small"
+                    type="date"
+                    label="Desde"
+                    value={startDate}
+                    onChange={(e) => {
+                        setStartDate(e.target.value);
+                        setPage(0);
+                    }}
+                    slotProps={{
+                        inputLabel: { shrink: true },
+                    }}
+                    sx={{ minWidth: 165 }}
+                />
+
+                <TextField
+                    size="small"
+                    type="date"
+                    label="Hasta"
+                    value={endDate}
+                    onChange={(e) => {
+                        setEndDate(e.target.value);
+                        setPage(0);
+                    }}
+                    slotProps={{
+                        inputLabel: { shrink: true },
+                    }}
+                    sx={{ minWidth: 165 }}
+                />
+
+                {hasActiveFilters && (
+                    <Button
+                        variant="outlined"
+                        color="inherit"
+                        size="small"
+                        startIcon={<ClearIcon />}
+                        onClick={handleClearFilters}
+                    >
+                        Limpiar filtros
+                    </Button>
+                )}
+            </Paper>
 
             {errorMessage && (
                 <Alert severity="error" sx={{ mb: 3 }} onClose={() => setErrorMessage(null)}>
@@ -249,10 +377,12 @@ export const MatchesPage: React.FC = () => {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {matches.length === 0 ? (
+                            {paginatedMatches.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={8} align="center">
-                                        No hay partidos programados en el sistema.
+                                    <TableCell colSpan={8} align="center" sx={{ py: 3 }}>
+                                        {hasActiveFilters
+                                            ? 'No hay partidos que coincidan con los filtros seleccionados.'
+                                            : 'No hay partidos programados en el sistema.'}
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -267,7 +397,7 @@ export const MatchesPage: React.FC = () => {
                                         <TableCell>{match.tournament?.name || `Torneo #${match.tournamentId}`}</TableCell>
                                         <TableCell align="right"><b>{match.homeTeam?.name}</b></TableCell>
                                         <TableCell align="center">
-                                            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                                            <Typography variant="body1" component="span" sx={{ fontWeight: 'bold' }}>
                                                 {match.status === 'SCHEDULED'
                                                     ? 'vs'
                                                     : `${match.homeScore ?? 0} - ${match.awayScore ?? 0}`}
@@ -281,7 +411,12 @@ export const MatchesPage: React.FC = () => {
                                                 <Select
                                                     value={match.refereeId || ''}
                                                     displayEmpty
-                                                    onChange={(e) => handleAssignReferee(match.id, e.target.value ? Number(e.target.value) : null)}
+                                                    onChange={(e) =>
+                                                        handleAssignReferee(
+                                                            match.id,
+                                                            e.target.value ? Number(e.target.value) : null
+                                                        )
+                                                    }
                                                     sx={{ fontSize: '0.875rem' }}
                                                 >
                                                     <MenuItem value="">
@@ -308,6 +443,18 @@ export const MatchesPage: React.FC = () => {
                                         </TableCell>
 
                                         <TableCell align="center">
+                                            <Tooltip title="Planilla Digital del Partido">
+                                                <IconButton
+                                                    color="info"
+                                                    onClick={() => {
+                                                        setMatchForSheet(match);
+                                                        setOpenSheetModal(true);
+                                                    }}
+                                                >
+                                                    <AssignmentIcon />
+                                                </IconButton>
+                                            </Tooltip>
+
                                             <Tooltip title="Acta del Partido (Eventos)">
                                                 <IconButton
                                                     color="secondary"
@@ -350,11 +497,10 @@ export const MatchesPage: React.FC = () => {
                         </TableBody>
                     </Table>
 
-                    {/* Controles de Paginación */}
                     <TablePagination
                         rowsPerPageOptions={[5, 10, 25, 50]}
                         component="div"
-                        count={matches.length}
+                        count={filteredMatches.length}
                         rowsPerPage={rowsPerPage}
                         page={page}
                         onPageChange={handleChangePage}
@@ -365,7 +511,6 @@ export const MatchesPage: React.FC = () => {
                 </TableContainer>
             )}
 
-            {/* Menú flotante para cambio manual de estado */}
             <Menu
                 anchorEl={anchorEl}
                 open={Boolean(anchorEl)}
@@ -407,6 +552,46 @@ export const MatchesPage: React.FC = () => {
                 }}
                 onScoreUpdated={fetchData}
             />
+
+            <Dialog
+                open={openSheetModal}
+                onClose={() => {
+                    setOpenSheetModal(false);
+                    setMatchForSheet(null);
+                }}
+                maxWidth="xl"
+                fullWidth
+            >
+                <DialogTitle
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                    }}
+                >
+                    <span>
+                        Planilla Digital — {matchForSheet?.homeTeam?.name} vs {matchForSheet?.awayTeam?.name}
+                    </span>
+                    <IconButton
+                        onClick={() => {
+                            setOpenSheetModal(false);
+                            setMatchForSheet(null);
+                        }}
+                        size="small"
+                    >
+                        <CloseIcon />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent dividers>
+                    {matchForSheet && (
+                        <MatchSheetView
+                            matchId={matchForSheet.id}
+                            referees={referees}
+                            onSaved={fetchData}
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
 
             <ConfirmDeleteDialog
                 open={openDeleteDialog}

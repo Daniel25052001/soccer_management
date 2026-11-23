@@ -1,4 +1,9 @@
-import { PartialType } from '@nestjs/mapped-types';
 import { CreateMatchRosterDto } from './create-match-roster.dto';
 
-export class UpdateMatchRosterDto extends PartialType(CreateMatchRosterDto) { }
+export class UpdateMatchRosterDto implements Partial<CreateMatchRosterDto> {
+    matchId?: number;
+    teamId?: number;
+    playerId?: number;
+    isStarting?: boolean;
+    shirtNumber?: number;
+}

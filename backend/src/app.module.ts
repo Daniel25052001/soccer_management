@@ -8,6 +8,7 @@ import { PlayersModule } from './players/players.module';
 import { MatchesModule } from './matches/matches.module';
 import { MatchRostersModule } from './match-rosters/match-rosters.module';
 import { MatchEventsModule } from './match-events/match-events.module';
+import { MatchSheetModule } from './match-sheet/match-sheet.module';
 import { SanctionsModule } from './sanctions/sanctions.module';
 import { StandingsModule } from './standings/standings.module';
 import { TournamentStandingsModule } from './tournament-standings/tournament-standings.module';
@@ -30,6 +31,7 @@ import { RefereesModule } from './referees/referees.module';
     MatchesModule,
     MatchRostersModule,
     MatchEventsModule,
+    MatchSheetModule,
     SanctionsModule,
     StandingsModule,
     TournamentStandingsModule,

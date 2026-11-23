@@ -8,13 +8,13 @@ generator client {
 }
 
 model Tournament {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   name        String
   description String?
   startDate   DateTime
   endDate     DateTime?
-  status      String   @default("DRAFT") // 'DRAFT', 'IN_PROGRESS', 'FINISHED', 'CANCELLED'
-  createdAt   DateTime @default(now())
+  status      String    @default("DRAFT") // 'DRAFT', 'IN_PROGRESS', 'FINISHED', 'CANCELLED'
+  createdAt   DateTime  @default(now())
 
   teams     Team[]
   matches   Match[]
@@ -68,6 +68,9 @@ model Match {
   homeTeamId        Int
   awayTeamId        Int
   matchDate         DateTime
+  venue             String?
+  phase             String?
+  sheetNumber       String?
   status            String   @default("SCHEDULED") // 'SCHEDULED', 'IN_PROGRESS', 'FINISHED', 'POSTPONED', 'CANCELLED'
   homeScore         Int      @default(0)
   awayScore         Int      @default(0)
@@ -101,6 +104,7 @@ model MatchRoster {
   playerId     Int
   jerseyNumber Int
   isStarter    Boolean @default(false)
+  played       Boolean @default(false)
   isSuspended  Boolean @default(false)
 
   match  Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)

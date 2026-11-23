@@ -1,34 +1,41 @@
 {
     "name": "goladmin-desktop",
     "version": "1.0.0",
-    "description": "GolAdmin PWA Desktop Application",
+    "description": "Sistema de gestión de torneos deportivos GolAdmin PWA",
+    "author": "Daniel Stiven Galvis Montoya",
     "main": "electron/main.js",
     "scripts": {
-        "build:backend": "cd backend && npm install && npm run build",
-        "build:frontend": "cd frontend && npm install && npm run build",
-        "build:all": "npm run build:backend && npm run build:frontend && electron-builder",
-        "electron:dev": "electron ."
-    },
-    "devDependencies": {
-        "electron": "^33.0.0",
-        "electron-builder": "^25.1.8",
-        "wait-on": "^7.2.0"
+        "build:backend": "cd backend && npm run build",
+        "build:frontend": "cd frontend && npm run build",
+        "build:all": "npm run build:backend && npm run build:frontend",
+        "package": "npm run build:all && electron-builder --win --x64"
     },
     "build": {
         "appId": "com.goladmin.pwa",
         "productName": "GolAdmin PWA",
+        "asar": false,
         "directories": {
-            "output": "release"
+            "output": "C:/goladmin-release"
         },
         "win": {
             "target": [
-                {
-                    "target": "nsis",
-                    "arch": [
-                        "x64"
-                    ]
-                }
+                "nsis"
             ]
-        }
+        },
+        "files": [
+            "electron/**/*",
+            "frontend/dist/**/*",
+            "backend/dist/**/*",
+            "backend/node_modules/**/*",
+            "!backend/node_modules/**/*.{md,ts,map}",
+            "!backend/node_modules/**/{test,__tests__,tests,docs,example,examples}/**",
+            "backend/prisma/**/*",
+            "backend/dev.db",
+            "package.json"
+        ]
+    },
+    "devDependencies": {
+        "electron": "^45.3.1",
+        "electron-builder": "^26.18.0"
     }
 }
