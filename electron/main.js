@@ -1,11 +1,13 @@
-const { app, dialog, Menu } = require('electron');
+const { app, dialog, Menu, BrowserWindow } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { fork } = require('child_process');
+const net = require('net');
+const { fork, execSync } = require('child_process');
 
-// Forzar la creación temprana de la carpeta userData y el archivo de log para evitar errores de ruta
 let userDataPath = '';
 let logStream = null;
+let backendProcess = null;
+let mainWindow = null;
 
 try {
     userDataPath = app.getPath('userData');
@@ -19,72 +21,131 @@ try {
     console.error('No se pudo inicializar el logger:', e);
 }
 
-// Capturar errores críticos de excepción
+function writeLog(message) {
+    if (logStream && !logStream.destroyed && !logStream.writableEnded) {
+        logStream.write(message);
+    }
+}
+
+function findFreePort(host = '127.0.0.1') {
+    return new Promise((resolve, reject) => {
+        const server = net.createServer();
+        server.unref();
+        server.on('error', reject);
+        server.listen(0, host, () => {
+            const address = server.address();
+            const port = typeof address === 'object' && address ? address.port : null;
+            server.close((closeErr) => {
+                if (closeErr) return reject(closeErr);
+                if (!port) return reject(new Error('No se pudo obtener un puerto libre.'));
+                resolve(port);
+            });
+        });
+    });
+}
+
+function killBackendProcess() {
+    if (!backendProcess || backendProcess.killed) return;
+    const pid = backendProcess.pid;
+    try {
+        if (process.platform === 'win32' && pid) {
+            execSync(`taskkill /F /T /PID ${pid}`, { stdio: 'ignore' });
+        } else {
+            backendProcess.kill('SIGTERM');
+        }
+    } catch (_) {
+        try {
+            backendProcess.kill();
+        } catch (_) { }
+    } finally {
+        backendProcess = null;
+    }
+}
+
 process.on('uncaughtException', (error) => {
     const errorMsg = `Error Crítico de Excepción: ${error.stack || error.message}\n`;
-    if (logStream) logStream.write(errorMsg);
+    writeLog(errorMsg);
     dialog.showErrorBox('Error Crítico de Excepción', error.stack || error.message);
+    killBackendProcess();
     app.quit();
 });
 
-let backendProcess = null;
-
-// Función para iniciar el backend y esperar su confirmación por IPC (Proceso hijo)
-function startBackend(backendMain, backendWorkingDir, normalizedDbPath) {
+function startBackend(backendMain, backendWorkingDir, normalizedDbPath, port) {
     return new Promise((resolve, reject) => {
+        let settled = false;
+        let recentStderr = '';
+
+        const timer = setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            killBackendProcess();
+            const detail = recentStderr.trim() ? `\nDetalle:\n${recentStderr.trim()}` : '';
+            reject(new Error(`Timeout: El backend no envió la señal de listo en el puerto ${port}.${detail}`));
+        }, 25000);
+
+        const finishResolve = () => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            resolve();
+        };
+
+        const finishReject = (err) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            reject(err);
+        };
+
         backendProcess = fork(backendMain, [], {
             cwd: backendWorkingDir,
             env: {
                 ...process.env,
                 ELECTRON_RUN_AS_NODE: '1',
-                PORT: '3000',
-                DATABASE_URL: `file:${normalizedDbPath}`
+                PORT: String(port),
+                DATABASE_URL: `file:${normalizedDbPath}`,
             },
-            stdio: ['pipe', 'pipe', 'pipe', 'ipc']
+            stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
         });
 
         backendProcess.stdout.on('data', (data) => {
-            if (logStream) logStream.write(`[STDOUT]: ${data.toString()}`);
+            writeLog(`[STDOUT]: ${data.toString()}`);
         });
 
         backendProcess.stderr.on('data', (data) => {
-            if (logStream) logStream.write(`[STDERR]: ${data.toString()}`);
+            const text = data.toString();
+            recentStderr = (recentStderr + text).slice(-1500);
+            writeLog(`[STDERR]: ${text}`);
         });
 
-        // Escuchar la señal IPC del backend
         backendProcess.on('message', (msg) => {
             if (msg === 'backend-ready') {
-                if (logStream) logStream.write('Backend listo y confirmado vía IPC.\n');
-                resolve();
+                writeLog(`Backend listo y confirmado vía IPC en el puerto ${port}.\n`);
+                finishResolve();
             }
         });
 
         backendProcess.on('exit', (code) => {
             if (code !== 0 && code !== null) {
-                reject(new Error(`El backend terminó con código ${code}`));
+                finishReject(new Error(`El backend terminó con código ${code}`));
             }
         });
 
         backendProcess.on('error', (err) => {
-            reject(err);
+            finishReject(err);
         });
-
-        setTimeout(() => {
-            reject(new Error('Timeout: El backend no envió la señal de listo.'));
-        }, 15000);
     });
 }
 
-function createWindow() {
-    const { BrowserWindow } = require('electron');
-    const mainWindow = new BrowserWindow({
+function createWindow(apiPort) {
+    mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
-            devTools: true
-        }
+            devTools: true,
+        },
     });
 
     mainWindow.webContents.on('before-input-event', (event, input) => {
@@ -98,25 +159,27 @@ function createWindow() {
         const contextMenu = Menu.buildFromTemplate([
             {
                 label: 'Inspeccionar elemento',
-                click: () => { mainWindow.webContents.inspectElement(params.x, params.y); }
+                click: () => {
+                    mainWindow.webContents.inspectElement(params.x, params.y);
+                },
             },
             { type: 'separator' },
             { role: 'reload', label: 'Recargar' },
-            { role: 'toggleDevTools', label: 'Alternar Herramientas de Desarrollo' }
+            { role: 'toggleDevTools', label: 'Alternar Herramientas de Desarrollo' },
         ]);
         contextMenu.popup({ window: mainWindow });
     });
 
     const basePath = app.getAppPath();
     const indexPath = path.join(basePath, 'frontend/dist/index.html');
-    mainWindow.loadFile(indexPath);
+    mainWindow.loadFile(indexPath, { query: { apiPort: String(apiPort) } });
 }
 
 app.whenReady().then(async () => {
     try {
         const basePath = app.getAppPath();
-        if (logStream) logStream.write(`App Path: ${basePath}\n`);
-        if (logStream) logStream.write(`User Data Path: ${userDataPath}\n`);
+        writeLog(`App Path: ${basePath}\n`);
+        writeLog(`User Data Path: ${userDataPath}\n`);
 
         const dbPath = path.join(userDataPath, 'database.db');
         const initialDbInPrisma = path.join(basePath, 'backend/prisma/dev.db');
@@ -125,39 +188,43 @@ app.whenReady().then(async () => {
 
         if (!fs.existsSync(dbPath) && fs.existsSync(initialDbPath)) {
             fs.copyFileSync(initialDbPath, dbPath);
-            if (logStream) logStream.write(`Base de datos copiada desde ${initialDbPath} a ${dbPath}\n`);
+            writeLog(`Base de datos copiada desde ${initialDbPath} a ${dbPath}\n`);
         }
 
         const backendMain = path.join(basePath, 'backend/dist/main.js');
 
-        if (fs.existsSync(backendMain)) {
-            const normalizedDbPath = dbPath.replace(/\\/g, '/');
-            const backendWorkingDir = path.join(basePath, 'backend');
-
-            if (logStream) {
-                logStream.write(`Lanzando backend desde: ${backendMain}\n`);
-                logStream.write(`Directorio de trabajo (cwd): ${backendWorkingDir}\n`);
-                logStream.write(`DATABASE_URL: file:${normalizedDbPath}\n`);
-            }
-
-            // Lanzar backend y esperar su confirmación IPC
-            await startBackend(backendMain, backendWorkingDir, normalizedDbPath);
-            if (logStream) logStream.write('Backend conectado exitosamente con el proceso principal de Electron.\n');
-        } else {
+        if (!fs.existsSync(backendMain)) {
             throw new Error(`No se encontró el backend en: ${backendMain}`);
         }
 
-        createWindow();
+        const apiPort = await findFreePort('127.0.0.1');
+        const normalizedDbPath = dbPath.replace(/\\/g, '/');
+        const backendWorkingDir = path.join(basePath, 'backend');
+
+        writeLog(`Puerto dinámico asignado: ${apiPort}\n`);
+        writeLog(`Lanzando backend desde: ${backendMain}\n`);
+        writeLog(`Directorio de trabajo (cwd): ${backendWorkingDir}\n`);
+        writeLog(`DATABASE_URL: file:${normalizedDbPath}\n`);
+
+        await startBackend(backendMain, backendWorkingDir, normalizedDbPath, apiPort);
+        writeLog('Backend conectado exitosamente con el proceso principal de Electron.\n');
+
+        createWindow(apiPort);
     } catch (error) {
         const errDetails = error.stack || error.message;
-        if (logStream) logStream.write(`[FATAL ERROR]: ${errDetails}\n`);
+        writeLog(`[FATAL ERROR]: ${errDetails}\n`);
         dialog.showErrorBox('Error al Arrancar la App', errDetails);
+        killBackendProcess();
         app.quit();
     }
 });
 
 app.on('window-all-closed', () => {
-    if (backendProcess) backendProcess.kill();
-    if (logStream) logStream.end();
-    if (process.platform !== 'darwin') app.quit();
+    killBackendProcess();
+    if (logStream && !logStream.writableEnded) {
+        logStream.end();
+    }
+    if (process.platform !== 'darwin') {
+        app.quit();
+    }
 });

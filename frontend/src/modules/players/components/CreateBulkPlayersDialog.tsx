@@ -22,7 +22,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import type { Team } from '../../../types';
-import axios from 'axios';
+import { apiClient } from '../../../api/apiClient';
 
 interface BulkPlayerRowData {
     id: string;
@@ -48,7 +48,7 @@ interface PlayerRowProps {
     canDelete: boolean;
 }
 
-const PlayerRow = memo(({ row, index, onChange, onRemove, canDelete }: PlayerRowProps) => {
+const PlayerRow = memo(({ row, onChange, onRemove, canDelete }: PlayerRowProps) => {
     return (
         <TableRow hover>
             <TableCell>
@@ -137,7 +137,14 @@ export const CreateBulkPlayersDialog: React.FC<CreateBulkPlayersDialogProps> = (
 }) => {
     const [teamId, setTeamId] = useState<number | ''>('');
     const [rows, setRows] = useState<BulkPlayerRowData[]>([
-        { id: Math.random().toString(36).substring(2, 9), firstName: '', lastName: '', documentId: '', defaultDorsal: '', position: '' }
+        {
+            id: Math.random().toString(36).substring(2, 9),
+            firstName: '',
+            lastName: '',
+            documentId: '',
+            defaultDorsal: '',
+            position: '',
+        },
     ]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -146,7 +153,14 @@ export const CreateBulkPlayersDialog: React.FC<CreateBulkPlayersDialogProps> = (
         if (open) {
             setTeamId('');
             setRows([
-                { id: Math.random().toString(36).substring(2, 9), firstName: '', lastName: '', documentId: '', defaultDorsal: '', position: '' }
+                {
+                    id: Math.random().toString(36).substring(2, 9),
+                    firstName: '',
+                    lastName: '',
+                    documentId: '',
+                    defaultDorsal: '',
+                    position: '',
+                },
             ]);
             setError(null);
         }
@@ -155,7 +169,14 @@ export const CreateBulkPlayersDialog: React.FC<CreateBulkPlayersDialogProps> = (
     const handleAddRow = useCallback(() => {
         setRows((prev) => [
             ...prev,
-            { id: Math.random().toString(36).substring(2, 9), firstName: '', lastName: '', documentId: '', defaultDorsal: '', position: '' }
+            {
+                id: Math.random().toString(36).substring(2, 9),
+                firstName: '',
+                lastName: '',
+                documentId: '',
+                defaultDorsal: '',
+                position: '',
+            },
         ]);
     }, []);
 
@@ -166,11 +187,14 @@ export const CreateBulkPlayersDialog: React.FC<CreateBulkPlayersDialogProps> = (
         });
     }, []);
 
-    const handleRowChange = useCallback((id: string, field: keyof BulkPlayerRowData, value: string) => {
-        setRows((prev) =>
-            prev.map((row) => (row.id === id ? { ...row, [field]: value } : row))
-        );
-    }, []);
+    const handleRowChange = useCallback(
+        (id: string, field: keyof BulkPlayerRowData, value: string) => {
+            setRows((prev) =>
+                prev.map((row) => (row.id === id ? { ...row, [field]: value } : row))
+            );
+        },
+        []
+    );
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -180,8 +204,14 @@ export const CreateBulkPlayersDialog: React.FC<CreateBulkPlayersDialogProps> = (
         }
 
         for (let i = 0; i < rows.length; i++) {
-            if (!rows[i].firstName.trim() || !rows[i].lastName.trim() || !rows[i].documentId.trim()) {
-                setError(`La fila #${i + 1} tiene campos obligatorios vacíos (Nombres, Apellidos o Documento).`);
+            if (
+                !rows[i].firstName.trim() ||
+                !rows[i].lastName.trim() ||
+                !rows[i].documentId.trim()
+            ) {
+                setError(
+                    `La fila #${i + 1} tiene campos obligatorios vacíos (Nombres, Apellidos o Documento).`
+                );
                 return;
             }
         }
@@ -202,13 +232,15 @@ export const CreateBulkPlayersDialog: React.FC<CreateBulkPlayersDialogProps> = (
                 })),
             };
 
-            await axios.post('http://localhost:3000/api/players/bulk', payload);
+            await apiClient.post('/players/bulk', payload);
 
             onSuccess();
             onClose();
         } catch (err: any) {
             console.error('Error en carga masiva:', err);
-            setError(err.response?.data?.message || 'Ocurrió un error al registrar los jugadores.');
+            setError(
+                err.response?.data?.message || 'Ocurrió un error al registrar los jugadores.'
+            );
         } finally {
             setLoading(false);
         }
@@ -251,7 +283,9 @@ export const CreateBulkPlayersDialog: React.FC<CreateBulkPlayersDialogProps> = (
                                     <TableCell><b>Documento *</b></TableCell>
                                     <TableCell sx={{ width: '90px' }}><b>Dorsal</b></TableCell>
                                     <TableCell sx={{ width: '140px' }}><b>Posición</b></TableCell>
-                                    <TableCell align="center" sx={{ width: '60px' }}><b>Acción</b></TableCell>
+                                    <TableCell align="center" sx={{ width: '60px' }}>
+                                        <b>Acción</b>
+                                    </TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>

@@ -38,14 +38,14 @@ export const getStandings = async (tournamentId: number): Promise<TeamStanding[]
  * Obtiene la valla menos vencida de un torneo.
  */
 export const getBestDefense = async (tournamentId: number): Promise<BestDefense | null> => {
-    const response = await apiClient.get<BestDefense>(`/standings/${tournamentId}/best-defense`);
+    const response = await apiClient.get<BestDefense | null>(`/standings/${tournamentId}/best-defense`);
     return response.data;
 };
 
 /**
  * Obtiene el top de goleadores de un torneo.
  */
-export const getTopScorers = async (tournamentId: number) => {
-    const response = await fetch(`http://localhost:3000/api/standings/${tournamentId}/top-scorers`);
-    return await response.json();
+export const getTopScorers = async (tournamentId: number): Promise<TopScorer[]> => {
+    const response = await apiClient.get<TopScorer[]>(`/standings/${tournamentId}/top-scorers`);
+    return response.data;
 };

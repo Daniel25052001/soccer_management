@@ -15,20 +15,13 @@ import SecurityIcon from '@mui/icons-material/Security';
 import SportsSoccerIcon from '@mui/icons-material/SportsSoccer';
 import { StandingsTable } from '../modules/standings/pages/StandingsTable';
 import { getTournaments } from '../modules/tournaments/services/tournaments.service';
+import {
+    getBestDefense,
+    getTopScorers,
+    type BestDefense,
+    type TopScorer,
+} from '../modules/standings/services/standings.service';
 import type { Tournament } from '../types';
-
-interface BestDefense {
-    teamName: string;
-    goalsAgainst: number;
-    played: number;
-}
-
-interface TopScorer {
-    playerId: number;
-    playerName: string;
-    teamName: string;
-    goals: number;
-}
 
 export const StandingsPage: React.FC = () => {
     const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -54,15 +47,13 @@ export const StandingsPage: React.FC = () => {
 
     useEffect(() => {
         if (selectedTournamentId !== '') {
-            // Se añadió el prefijo /api/ para que coincida con la ruta global de NestJS
-            fetch(`http://localhost:3000/api/standings/${selectedTournamentId}/best-defense`)
-                .then((res) => res.json())
+            const tournamentId = Number(selectedTournamentId);
+
+            getBestDefense(tournamentId)
                 .then((data) => setBestDefense(data))
                 .catch(() => setBestDefense(null));
 
-            // Se añadió el prefijo /api/ aquí también
-            fetch(`http://localhost:3000/api/standings/${selectedTournamentId}/top-scorers`)
-                .then((res) => res.json())
+            getTopScorers(tournamentId)
                 .then((data) => setTopScorers(data))
                 .catch(() => setTopScorers([]));
         }
